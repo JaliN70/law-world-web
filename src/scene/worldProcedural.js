@@ -77,8 +77,18 @@ export function addTreeClusters(parent, layout) {
     return g;
   };
   Object.values(layout).forEach(([bx, , bz], i) => {
-    const t = makeTree(bx * 0.65, bz * 0.65, 0.9);
+    const d = Math.hypot(bx, bz) || 1;
+    const x = bx + (bx / d) * 5.5;
+    const z = bz + (bz / d) * 5.5;
+    if (Math.hypot(x, z) < 9) return;
+    const t = makeTree(x, z, 0.9);
     t.name = `deco_tree_${i}`;
+    t.traverse((o) => {
+      if (o.isMesh) {
+        o.userData.decorOnly = true;
+        o.raycast = () => {};
+      }
+    });
     parent.add(t);
   });
 }

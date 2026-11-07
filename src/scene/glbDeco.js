@@ -5,7 +5,8 @@ import {
   applySharedMaterial,
   getSharedPaletteMaterial,
 } from './glbLoader.js';
-import { BUILDING_NAMES } from './layouts.js';
+import { BUILDING_NAMES, BUILDING_HALF } from './layouts.js';
+import { PALETTE } from '../palette.js';
 import {
   addCentralPlaza as addCentralPlazaProcedural,
   addRockyCliff as addRockyCliffProcedural,
@@ -117,27 +118,38 @@ function placeOffsetRoad(parent, template4, template1, layoutEntry, plazaStart, 
   parent.add(run);
 }
 
+function treeFarFromBuildings(x, z, layout, minClear = 6.2) {
+  return Object.values(layout).every(([bx, , bz]) => Math.hypot(x - bx, z - bz) >= BUILDING_HALF + minClear);
+}
+
 function treeSpots(layout, isMobile) {
   const spots = [];
-  const push = (x, z, type, scale) => spots.push({ x, z, type, scale });
+  const push = (x, z, type, scale) => {
+    if (!treeFarFromBuildings(x, z, layout)) return;
+    if (Math.hypot(x, z) < 8.5) return;
+    spots.push({ x, z, type, scale });
+  };
 
   Object.values(layout).forEach(([bx, , bz]) => {
     const d = Math.hypot(bx, bz) || 1;
-    const nx = -bz / d;
-    const nz = bx / d;
-    push(bx * 0.42 + nx * 3.2, bz * 0.42 + nz * 3.2, 'a', 0.95);
-    push(bx * 0.72 - nx * 2.4, bz * 0.72 - nz * 2.4, 'b', 1.05);
+    const ox = bx / d;
+    const oz = bz / d;
+    const tx = -oz;
+    const tz = ox;
+    const outward = isMobile ? 6.2 : 5.6;
+    push(bx + ox * outward + tx * 2.2, bz + oz * outward + tz * 1.4, 'a', 0.95);
+    push(bx + ox * (outward + 1.6) - tx * 2.6, bz + oz * (outward + 1.6) - tz * 1.8, 'b', 1.02);
   });
 
-  const ring = isMobile ? 17 : 19;
-  push(-ring, 4, 'c', 1.1);
-  push(ring, 4, 'a', 0.9);
-  push(-ring, -5, 'b', 1);
-  push(ring, -5, 'c', 0.85);
-  push(0, ring, 'a', 1.05);
-  push(0, -ring, 'b', 0.95);
-  push(-ring * 0.7, ring * 0.65, 'c', 1.12);
-  push(ring * 0.7, -ring * 0.65, 'a', 0.88);
+  const ring = isMobile ? 18.5 : 20;
+  push(-ring, 6, 'c', 1.05);
+  push(ring, 6, 'a', 0.92);
+  push(-ring, -6.5, 'b', 0.98);
+  push(ring, -6.5, 'c', 0.88);
+  push(-4, ring, 'a', 1.02);
+  push(5, -ring, 'b', 0.94);
+  push(-ring * 0.75, ring * 0.55, 'c', 1.08);
+  push(ring * 0.8, -ring * 0.62, 'a', 0.9);
 
   return spots;
 }
@@ -185,6 +197,21 @@ export async function upgradeDecoToGlb({ island, layout, isMobile, onReport }) {
     const plaza = cloneDecoScene(templates.plaza);
     plaza.position.set(0, 0, 0);
     plaza.name = 'deco_plaza_ring';
+    const badgeGlow = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.92, 0.92, 0.06, 6),
+      new THREE.MeshLambertMaterial({
+        color: PALETTE.logoRed,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      })
+    );
+    badgeGlow.position.y = 0.2;
+    badgeGlow.name = 'deco_plaza_badge_glow';
+    badgeGlow.visible = false;
+    badgeGlow.raycast = () => {};
+    badgeGlow.userData.decorOnly = true;
+    plaza.add(badgeGlow);
     decoRoot.add(plaza);
   } else {
     addCentralPlazaProcedural(island);
