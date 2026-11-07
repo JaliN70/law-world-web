@@ -22,8 +22,9 @@ npm run build
 ## GitHub Pages
 
 - `vite.config.js` 已設定 `base: '/law-world-web/'`。
-- 請由倉庫擁有者於 **main 合併後** 再啟用 Pages；本專 PR 不變更 Pages 設定。
-- 公開網址預期為：`https://<user>.github.io/law-world-web/`
+- **Settings → Pages → Build and deployment → Source：** 選 **GitHub Actions**（勿使用 main 分支根目錄，否則會載入 `/src/main.js` 原始碼）。
+- `main` 推送會觸發 `.github/workflows/deploy-pages.yml`（`npm ci` → `npm run build` → 發佈 `dist/`）。
+- 公開網址：`https://jalin70.github.io/law-world-web/`
 
 ## 模型資產（CD v1.0）
 
