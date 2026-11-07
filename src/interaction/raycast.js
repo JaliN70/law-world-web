@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { BUILDING_NAMES } from '../scene/layouts.js';
 
 export function pickBuilding(camera, clickable, clientX, clientY, canvas) {
   const rect = canvas.getBoundingClientRect();
@@ -10,7 +11,9 @@ export function pickBuilding(camera, clickable, clientX, clientY, canvas) {
   for (const h of hits) {
     let o = h.object;
     while (o) {
-      if (o.userData.clickable && o.name) return o.name;
+      if (o.userData?.areaId) return o.userData.areaId;
+      if (BUILDING_NAMES.includes(o.name)) return o.name;
+      if (o.userData?.clickable && o.userData?.areaId) return o.userData.areaId;
       o = o.parent;
     }
   }

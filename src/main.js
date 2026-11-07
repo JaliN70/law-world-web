@@ -15,6 +15,8 @@ import {
 import { renderConfirmCard, bindCardActions } from './ui/card.js';
 import { openLessonSheet } from './ui/lesson.js';
 import { renderListCards } from './ui/listView.js';
+import { upgradeBuildingsToGlb, collectPulseMeshes } from './scene/glbBuildings.js';
+import modelStats from './data/model-stats.json';
 
 const canvas = document.getElementById('world-canvas');
 const labelsLayer = document.getElementById('labels-layer');
@@ -49,6 +51,9 @@ let world = createWorldScene({ isMobile, reducedMotion });
 let scene = world.scene;
 let buildings = world.buildings;
 let clickable = world.clickable;
+let pulseMeshes = world.pulseMeshes;
+
+const labelHeights = Object.fromEntries(modelStats.map((r) => [r.name, r.max[1]]));
 
 const tour = new TourDirector({
   rig,
@@ -96,14 +101,31 @@ function unlockPan() {
   BUILDING_NAMES.forEach((id) => labelEls[id].classList.remove('hidden'));
 }
 
+async function loadBuildingModels() {
+  try {
+    await upgradeBuildingsToGlb({
+      buildings,
+      onReport: (report) => {
+        window.__lawWorldGlbReport = report;
+      },
+    });
+    pulseMeshes = collectPulseMeshes(buildings);
+    applyUnlocks(scene, progress.unlocks);
+  } catch (e) {
+    console.warn('[law-world] GLB load failed, using MVP color blocks', e);
+  }
+}
+
 function rebuildLayout() {
   world = createWorldScene({ isMobile, reducedMotion });
   scene = world.scene;
   buildings = world.buildings;
   clickable = world.clickable;
+  pulseMeshes = world.pulseMeshes;
   tour.buildings = buildings;
   applyUnlocks(scene, progress.unlocks);
   if (focusedId) setBuildingSaturation(buildings, focusedId);
+  loadBuildingModels();
 }
 
 mqMobile.addEventListener('change', () => {
@@ -116,7 +138,7 @@ function updateLabels() {
     const g = buildings[id];
     if (!g) return;
     const top = g.position.clone();
-    top.y += 8;
+    top.y += (labelHeights[id] || 8) + 1;
     const s = rig.worldToScreen(top, width, height);
     const el = labelEls[id];
     if (s.behind) {
@@ -325,7 +347,7 @@ function animate() {
 
   if (!reducedMotion) {
     const t = performance.now() * 0.002;
-    world.pulseMeshes.forEach((m, i) => {
+    pulseMeshes.forEach((m, i) => {
       const s = 1 + Math.sin(t + i) * 0.06;
       m.scale.set(s, s, s);
     });
@@ -347,6 +369,7 @@ if (progress.introSeen || progress.visited) {
 }
 
 applyUnlocks(scene, progress.unlocks);
+loadBuildingModels();
 clearTimeout(loadTimer);
 document.getElementById('load-fallback').classList.add('hidden');
 onResize();

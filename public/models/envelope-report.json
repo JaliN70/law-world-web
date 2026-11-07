@@ -1,0 +1,43 @@
+{
+  "tolerance": 0.05,
+  "comparedAt": "2026-11-07",
+  "mvpVsCd": [
+    {
+      "name": "fire",
+      "mvpSize": [10.3, 11, 8],
+      "cdSize": [8, 9.55, 8],
+      "withinFivePercent": false
+    },
+    {
+      "name": "building",
+      "mvpSize": [7.2, 8, 7.7],
+      "cdSize": [8, 6.18, 8],
+      "withinFivePercent": false
+    },
+    {
+      "name": "telecom",
+      "mvpSize": [6, 14, 6],
+      "cdSize": [8, 10.45, 8],
+      "withinFivePercent": false
+    },
+    {
+      "name": "accessibility",
+      "mvpSize": [9.623, 2.971, 9],
+      "cdSize": [8, 4.97, 8],
+      "withinFivePercent": false
+    },
+    {
+      "name": "water",
+      "mvpSize": [7, 6.95, 7],
+      "cdSize": [8, 8.37, 8],
+      "withinFivePercent": false
+    },
+    {
+      "name": "electrical",
+      "mvpSize": [7.5, 3.25, 6.175],
+      "cdSize": [8, 4.55, 8],
+      "withinFivePercent": false
+    }
+  ],
+  "notes": "MVP 色塊剪影未對齊 CD 8×8 m 標準外框（±5%）。執行時若解碼 GLB 外框與 model-stats.json 相符，則在 placement parent 上以 1:1 替換色塊，不做非等比縮放。"
+}

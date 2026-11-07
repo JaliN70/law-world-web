@@ -1,0 +1,6 @@
+# Core packages; install pyrender==0.1.45 separately with --no-deps.
+numpy==2.5.4
+trimesh==5.2.0
+Pillow==13.0.0
+DracoPy==2.2.0
+PyOpenGL==3.1.10

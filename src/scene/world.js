@@ -65,13 +65,7 @@ export function createWorldScene({ isMobile, reducedMotion }) {
   scene.add(island);
 
   const clickable = Object.values(map);
-  return { scene, island, buildings: map, clickable, pulseMeshes: collectPulse(map) };
-}
-
-function collectPulse(map) {
-  const rings = [];
-  if (map.telecom?.userData.pulseRings) rings.push(...map.telecom.userData.pulseRings);
-  return rings;
+  return { scene, island, buildings: map, clickable, pulseMeshes: [] };
 }
 
 function addPaths(parent, layout) {
@@ -113,14 +107,19 @@ function addTrees(parent) {
 
 export function setBuildingSaturation(buildings, focusId) {
   Object.entries(buildings).forEach(([id, group]) => {
-    const sat = focusId && id !== focusId ? 0.6 : 1;
+    const dim = focusId && id !== focusId;
     group.traverse((obj) => {
-      if (obj.isMesh && obj.material?.color) {
+      if (!obj.isMesh || !obj.material) return;
+      if (obj.material.color) {
         if (!obj.userData.baseColor) obj.userData.baseColor = obj.material.color.clone();
         const c = obj.userData.baseColor;
         const hsl = { h: 0, s: 0, l: 0 };
         c.getHSL(hsl);
-        obj.material.color.setHSL(hsl.h, hsl.s * sat, hsl.l);
+        obj.material.color.setHSL(hsl.h, hsl.s * (dim ? 0.6 : 1), hsl.l);
+      } else if (obj.material.map) {
+        if (obj.userData.baseOpacity === undefined) obj.userData.baseOpacity = obj.material.opacity ?? 1;
+        obj.material.transparent = true;
+        obj.material.opacity = dim ? 0.45 : obj.userData.baseOpacity;
       }
     });
   });
@@ -149,12 +148,7 @@ export function applyUnlocks(scene, unlocks) {
       o.material.emissiveIntensity = 0.25;
     }
     if (o.name === 'unlock_fire_hydrant' && unlocks.unlock_fire_hydrant) {
-      const fire = scene.getObjectByName('fire');
-      const h = fire?.getObjectByName('fire_hydrant');
-      if (h?.material) {
-        h.material.emissive = new THREE.Color(PALETTE.logoRed);
-        h.material.emissiveIntensity = 0.5;
-      }
+      o.visible = true;
     }
   });
 }

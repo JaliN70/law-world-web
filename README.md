@@ -25,9 +25,16 @@ npm run build
 - 請由倉庫擁有者於 **main 合併後** 再啟用 Pages；本專 PR 不變更 Pages 設定。
 - 公開網址預期為：`https://<user>.github.io/law-world-web/`
 
+## 模型資產（CD v1.0）
+
+- Draco 壓縮 GLB 位於 `public/models/`（`fire` … `electrical`），色盤 `palette.png`
+- Draco 解碼器自架於 `public/draco/`（GitHub Pages 可載入）
+- 執行時以 GLB 解碼外框對照 `model-stats.json`（±5%）；通過則在 placement parent 上 **1:1** 替換 MVP 色塊，不做非等比縮放
+- MVP 色塊外框量測報告：`public/models/envelope-report.json`、`scripts/measure-mvp-bbox.mjs`
+
 ## 功能摘要
 
-- 等角正交相機、六棟色塊建築（mesh 名稱：`fire`、`building`、`telecom`、`accessibility`、`water`、`electrical`）
+- 等角正交相機、六棟建築（主 mesh 名稱：`fire`、`building`、`telecom`、`accessibility`、`water`、`electrical`）
 - 手機 2×3／桌機環狀布局、確認卡、本站教學與小測驗、列表檢視後備
 - 進度存於 `localStorage`（無後端）
 
