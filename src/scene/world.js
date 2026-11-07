@@ -88,29 +88,51 @@ export function setBuildingSaturation(buildings, focusId) {
   });
 }
 
+/** 解鎖時僅點亮場景內同名識別物件，不用整顆 mesh 發光或屋頂球體。 */
+const UNLOCK_DECO_HIGHLIGHT = {
+  unlock_fire_hydrant: {
+    names: ['deco_fire_hydrant', 'fire_hydrant'],
+    emissive: PALETTE.logoRed,
+    intensity: 0.18,
+  },
+  unlock_building_compass: { names: ['deco_building_compass'], emissive: PALETTE.brand, intensity: 0.12 },
+  unlock_access_tactile: { names: ['deco_access_tactile'], emissive: PALETTE.tactileYellow, intensity: 0.22 },
+  unlock_water_tower: { names: ['deco_water_tank'], emissive: PALETTE.waterBar, intensity: 0.2 },
+  unlock_electrical_glow: {
+    names: ['deco_electrical_insulator', 'deco_electrical_charger'],
+    emissive: PALETTE.electrical,
+    intensity: 0.14,
+  },
+  unlock_telecom_ring: { names: ['deco_telecom_ring1'], emissive: PALETTE.telecom, intensity: 0.1 },
+};
+
+function applyDecoHighlight(mesh, { emissive, intensity }) {
+  if (!mesh.isMesh || !mesh.material) return;
+  mesh.material = mesh.material.clone();
+  mesh.material.emissive = new THREE.Color(emissive);
+  mesh.material.emissiveIntensity = intensity;
+}
+
 export function applyUnlocks(scene, unlocks) {
   scene.traverse((o) => {
-    if (o.name.startsWith('unlock_') && unlocks[o.name]) o.visible = true;
     if (o.name === 'deco_street_lamp' && unlocks.deco_street_lamp) o.visible = true;
-    if ((o.name === 'deco_logo_hex' || o.name === 'deco_plaza_ring') && unlocks.deco_plaza_badge) {
-      if (o.isMesh && o.material) {
-        o.material.emissive = new THREE.Color(0xffcc00);
-        o.material.emissiveIntensity = 0.28;
+
+    Object.entries(UNLOCK_DECO_HIGHLIGHT).forEach(([key, spec]) => {
+      if (unlocks[key] && spec.names.includes(o.name)) {
+        o.visible = true;
+        applyDecoHighlight(o, spec);
       }
+    });
+
+    if (o.name === 'deco_logo_hex' && unlocks.deco_plaza_badge && o.isMesh && o.material) {
+      applyDecoHighlight(o, { emissive: PALETTE.logoRed, intensity: 0.14 });
     }
-    if (o.name === 'deco_access_tactile' && unlocks.unlock_access_tactile) {
-      o.material = new THREE.MeshLambertMaterial({
-        color: PALETTE.tactileYellow,
-        emissive: PALETTE.tactileYellow,
-        emissiveIntensity: 0.45,
-      });
-    }
-    if (o.name === 'deco_water_tank' && unlocks.unlock_water_tower) {
-      o.material.emissive = new THREE.Color(PALETTE.waterBar);
-      o.material.emissiveIntensity = 0.25;
-    }
-    if (o.name === 'unlock_fire_hydrant' && unlocks.unlock_fire_hydrant) {
+    if (o.name === 'deco_plaza_badge_glow' && unlocks.deco_plaza_badge) {
       o.visible = true;
+      if (o.isMesh && o.material) {
+        o.material.opacity = 0.38;
+        applyDecoHighlight(o, { emissive: PALETTE.logoRed, intensity: 0.14 });
+      }
     }
   });
 }

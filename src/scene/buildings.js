@@ -29,7 +29,7 @@ export function createFire() {
   wing.position.set(-2, 1, 1);
   const hydrant = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 0.6, 8), mat(PALETTE.logoRed));
   hydrant.position.set(5, 0.3, 3);
-  hydrant.name = 'fire_hydrant';
+  hydrant.name = 'deco_fire_hydrant';
   g.add(base, tower, wing, hydrant);
   return g;
 }
@@ -121,59 +121,45 @@ const factories = {
   electrical: createElectrical,
 };
 
-export function createUnlockDecor(name, color = 0xffdd66) {
-  const m = new THREE.Mesh(
-    new THREE.SphereGeometry(0.35, 8, 8),
-    mat(color, { emissive: color, emissiveIntensity: 0.4 })
-  );
-  m.name = name;
-  m.visible = false;
-  return m;
-}
-
+/** GLB 內無分件名稱時，於地面預留識別 mesh（非屋頂發光球）。 */
 export function attachUnlockMesh(placement, id) {
-  const unlockNames = {
-    fire: 'unlock_fire_hydrant',
-    building: 'unlock_building_compass',
-    accessibility: 'unlock_access_tactile',
-    water: 'unlock_water_tower',
-    electrical: 'unlock_electrical_glow',
+  const groundMarkers = {
+    fire: { name: 'deco_fire_hydrant', geo: new THREE.CylinderGeometry(0.22, 0.28, 0.55, 8), pos: [3.6, 0.28, 3.2] },
+    building: {
+      name: 'deco_building_compass',
+      geo: new THREE.CylinderGeometry(0.35, 0.35, 0.08, 12),
+      pos: [0, 0.06, 3.8],
+    },
+    electrical: {
+      name: 'deco_electrical_charger',
+      geo: new THREE.BoxGeometry(0.5, 0.9, 0.35),
+      pos: [2.8, 0.45, 2.6],
+    },
   };
-  if (unlockNames[id] && placement.getObjectByName(unlockNames[id])) return;
-  const map = {
-    fire: 'unlock_fire_hydrant',
-    building: 'unlock_building_compass',
-    telecom: 'unlock_telecom_ring',
-    accessibility: 'unlock_access_tactile',
-    water: 'unlock_water_tower',
-    electrical: 'unlock_electrical_glow',
+  const spec = groundMarkers[id];
+  if (!spec || placement.getObjectByName(spec.name)) return;
+  const colors = {
+    fire: PALETTE.logoRed,
+    building: PALETTE.brand,
+    electrical: PALETTE.electrical,
   };
-  const name = map[id];
-  if (!name || id === 'telecom') return;
-  const m = createUnlockDecor(name);
-  m.position.set(0, 5.5, 2);
+  const m = new THREE.Mesh(spec.geo, mat(colors[id] ?? PALETTE.brand));
+  m.position.set(...spec.pos);
+  m.name = spec.name;
+  m.visible = false;
+  m.userData.clickable = false;
+  m.raycast = () => {};
   placement.add(m);
 }
 
 /** Scene-layer effects (not in GLB): pulse rings, unlock highlights */
 export function attachSceneEffects(placement, id, { isGlb = false } = {}) {
   if (id === 'telecom') {
-    const ring1 = new THREE.Mesh(
-      new THREE.TorusGeometry(1.2, 0.08, 8, 24),
-      mat(PALETTE.roofLight)
-    );
+    const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.05, 8, 20), mat(PALETTE.roofLight));
     ring1.rotation.x = Math.PI / 2;
-    ring1.position.set(0, isGlb ? 9.5 : 11, 0);
+    ring1.position.set(0, isGlb ? 9.35 : 11, 0);
     ring1.name = 'deco_telecom_ring1';
-    const ring2 = new THREE.Mesh(
-      new THREE.TorusGeometry(1.4, 0.1, 8, 24),
-      mat(0xffdd66, { emissive: 0xffaa00, emissiveIntensity: 0.2 })
-    );
-    ring2.rotation.x = Math.PI / 2;
-    ring2.position.set(0, isGlb ? 10.6 : 12.2, 0);
-    ring2.name = 'unlock_telecom_ring';
-    ring2.visible = false;
-    placement.add(ring1, ring2);
+    placement.add(ring1);
     placement.userData.pulseRings = [ring1];
   }
   placement.userData.clickable = true;
