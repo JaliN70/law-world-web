@@ -15,6 +15,8 @@ import {
 import { renderConfirmCard, bindCardActions } from './ui/card.js';
 import { openLessonSheet } from './ui/lesson.js';
 import { renderListCards } from './ui/listView.js';
+import { renderQuestPanel } from './ui/questPanel.js';
+import { countCompletedQuests } from './data/parkQuests.js';
 import { upgradeBuildingsToGlb, collectPulseMeshes } from './scene/glbBuildings.js';
 import modelStats from './data/model-stats.json';
 
@@ -27,6 +29,7 @@ const listCards = document.getElementById('list-cards');
 const canvasWrap = document.getElementById('canvas-wrap');
 const lessonSheet = document.getElementById('lesson-sheet');
 const tutorialOverlay = document.getElementById('tutorial-overlay');
+const tutorialSpotlight = document.getElementById('tutorial-spotlight');
 const questPanel = document.getElementById('quest-panel');
 
 const progress = loadProgress();
@@ -52,8 +55,13 @@ let scene = world.scene;
 let buildings = world.buildings;
 let clickable = world.clickable;
 let pulseMeshes = world.pulseMeshes;
+let worldBounds = world.worldBounds;
 
 const labelHeights = Object.fromEntries(modelStats.map((r) => [r.name, r.max[1]]));
+
+rig.setPanBounds(worldBounds.islandRadius);
+fitCamera();
+updateQuestThumb();
 
 const tour = new TourDirector({
   rig,
@@ -116,13 +124,20 @@ async function loadBuildingModels() {
   }
 }
 
+function fitCamera() {
+  resizeCamera(camera, width, height, worldBounds, isMobile);
+}
+
 function rebuildLayout() {
   world = createWorldScene({ isMobile, reducedMotion });
   scene = world.scene;
   buildings = world.buildings;
   clickable = world.clickable;
   pulseMeshes = world.pulseMeshes;
+  worldBounds = world.worldBounds;
   tour.buildings = buildings;
+  rig.setPanBounds(worldBounds.islandRadius);
+  fitCamera();
   applyUnlocks(scene, progress.unlocks);
   if (focusedId) setBuildingSaturation(buildings, focusedId);
   loadBuildingModels();
@@ -146,8 +161,34 @@ function updateLabels() {
       return;
     }
     el.style.visibility = 'visible';
-    el.style.transform = `translate(${s.x}px, ${s.y - 28}px) translate(-50%, -100%)`;
+    const pad = 12;
+    const lx = Math.min(width - pad, Math.max(pad, s.x));
+    const ly = Math.min(height - pad, Math.max(pad + 48, s.y - 20));
+    el.style.transform = `translate(${lx}px, ${ly}px) translate(-50%, -100%)`;
   });
+}
+
+function updateQuestThumb() {
+  const n = countCompletedQuests(progress);
+  const el = document.getElementById('quest-thumb-count');
+  if (el) el.textContent = `${n}/6`;
+}
+
+function updateTutorialSpotlight(buildingId) {
+  if (!buildingId || !buildings[buildingId]) {
+    tutorialSpotlight.classList.add('hidden');
+    return;
+  }
+  const g = buildings[buildingId];
+  const top = g.position.clone();
+  top.y += (labelHeights[buildingId] || 8) * 0.55;
+  const s = rig.worldToScreen(top, width, height);
+  const size = Math.min(width, height) * (isMobile ? 0.34 : 0.22);
+  tutorialSpotlight.classList.remove('hidden');
+  tutorialSpotlight.style.left = `${s.x}px`;
+  tutorialSpotlight.style.top = `${s.y}px`;
+  tutorialSpotlight.style.width = `${size}px`;
+  tutorialSpotlight.style.height = `${size}px`;
 }
 
 function onBuildingSelect(id) {
@@ -172,8 +213,10 @@ function openCard(areaId) {
       openLessonSheet(lessonSheet, id, progress, () => {
         applyUnlocks(scene, progress.unlocks);
         maybeCrossUnlocks();
+        updateQuestThumb();
       });
     },
+    close: closeCard,
   });
 }
 
@@ -203,12 +246,10 @@ attachPanZoom(canvas, rig, {
   },
 });
 
-document.getElementById('btn-card-close').addEventListener('click', closeCard);
 document.getElementById('btn-toggle-view').addEventListener('click', toggleList);
+document.getElementById('btn-toggle-view-top')?.addEventListener('click', toggleList);
 document.getElementById('btn-fallback-list').addEventListener('click', () => showList(true));
 document.getElementById('btn-quests').addEventListener('click', openQuests);
-document.getElementById('btn-quest-close').addEventListener('click', () => questPanel.classList.add('hidden'));
-
 function toggleList() {
   const show = listView.classList.contains('hidden');
   showList(show);
@@ -229,15 +270,18 @@ listCards.addEventListener('click', (e) => {
 });
 
 function openQuests() {
-  const ul = document.getElementById('quest-list');
-  ul.innerHTML = Object.values(AREAS)
-    .map((a) => {
-      const q = a.quests[0];
-      const done = progress.questsDone[q?.id];
-      return `<li>${a.buildingName} — ${q?.title || '—'} ${done ? '✓' : ''}</li>`;
-    })
-    .join('');
+  renderQuestPanel(questPanel, progress);
   questPanel.classList.remove('hidden');
+  questPanel.querySelector('#btn-quest-close')?.addEventListener('click', () => {
+    questPanel.classList.add('hidden');
+  });
+  questPanel.addEventListener(
+    'click',
+    (e) => {
+      if (e.target === questPanel) questPanel.classList.add('hidden');
+    },
+    { once: true }
+  );
 }
 
 function maybeCrossUnlocks() {
@@ -246,49 +290,79 @@ function maybeCrossUnlocks() {
   if (n >= 6) progress.unlocks.deco_plaza_badge = true;
   saveProgress(progress);
   applyUnlocks(scene, progress.unlocks);
+  updateQuestThumb();
 }
 
 /* Tutorial */
 const TUTORIAL_STEPS = [
-  '法規園區有六個領域，每棟建築都有自己的導讀與任務。',
-  '請點選一座建築（建議消防站），會出現確認卡片。',
-  '按「本站教學／任務」可閱讀導讀卡，例如第 14 條滅火器摘要。',
-  '完成小題會點亮裝飾；想看全文可按「進入法規站」或「查看原文」。',
+  {
+    title: '歡迎來到法規園區',
+    body: '法規園區有六個領域，每棟建築都有自己的導讀與任務。',
+    spotlight: null,
+  },
+  {
+    title: '點一下任一棟建築',
+    body: '每棟建築是一個法規領域。點選後鏡頭推近，出現確認卡片，可在本站開始該區教學。全部建築一開始就能進入。',
+    spotlight: 'fire',
+  },
+  {
+    title: '開始本區教學',
+    body: '示範消防區導讀卡——「第 14 條·滅火器」的白話摘要與底部出處列。',
+    spotlight: 'fire',
+  },
+  {
+    title: '任務與原⽂',
+    body: '完成小題會點亮建築裝飾；想看全文按「進入法規站」或「查看原文」。',
+    spotlight: null,
+  },
 ];
+
+let tutorialStepIndex = 0;
+let tutorialActive = false;
 
 function runTutorial() {
   if (progress.tutorialDone) return;
-  let step = progress.tutorialStep || 0;
+  tutorialStepIndex = progress.tutorialStep || 0;
+  tutorialActive = true;
   tutorialOverlay.classList.remove('hidden');
   const text = document.getElementById('tutorial-text');
+  const title = document.getElementById('tutorial-title');
+  const stepLabel = document.getElementById('tutorial-step-label');
   const next = document.getElementById('btn-tutorial-next');
   const skip = document.getElementById('btn-tutorial-skip');
 
   const renderStep = () => {
-    text.textContent = TUTORIAL_STEPS[step] || '';
-    next.textContent = step >= TUTORIAL_STEPS.length - 1 ? '開始探索' : '下一步';
+    const cur = TUTORIAL_STEPS[tutorialStepIndex];
+    title.textContent = cur.title;
+    text.textContent = cur.body;
+    stepLabel.textContent = `教學 ${tutorialStepIndex + 1} / ${TUTORIAL_STEPS.length}`;
+    next.textContent = tutorialStepIndex >= TUTORIAL_STEPS.length - 1 ? '開始探索' : '下一步';
+    Object.values(labelEls).forEach((el) => el.classList.remove('pulse'));
+    if (cur.spotlight) {
+      labelEls[cur.spotlight]?.classList.add('pulse');
+      updateTutorialSpotlight(cur.spotlight);
+    } else {
+      updateTutorialSpotlight(null);
+    }
   };
   renderStep();
 
   skip.onclick = () => finishTutorial();
   next.onclick = () => {
-    if (step >= TUTORIAL_STEPS.length - 1) finishTutorial();
+    if (tutorialStepIndex >= TUTORIAL_STEPS.length - 1) finishTutorial();
     else {
-      step += 1;
-      progress.tutorialStep = step;
+      tutorialStepIndex += 1;
+      progress.tutorialStep = tutorialStepIndex;
       saveProgress(progress);
       renderStep();
-      if (step === 1) highlightBuilding('fire');
     }
   };
 }
 
-function highlightBuilding(id) {
-  labelEls[id]?.classList.add('pulse');
-}
-
 function finishTutorial() {
+  tutorialActive = false;
   tutorialOverlay.classList.add('hidden');
+  tutorialSpotlight.classList.add('hidden');
   progress.tutorialDone = true;
   saveProgress(progress);
   Object.values(labelEls).forEach((el) => el.classList.remove('pulse'));
@@ -310,8 +384,12 @@ function onResize() {
   width = canvas.clientWidth;
   height = canvas.clientHeight;
   renderer.setSize(width, height, false);
-  resizeCamera(camera, width, height);
+  fitCamera();
   updateLabels();
+  if (tutorialActive) {
+    const cur = TUTORIAL_STEPS[tutorialStepIndex];
+    if (cur?.spotlight) updateTutorialSpotlight(cur.spotlight);
+  }
 }
 
 window.addEventListener('resize', onResize);
