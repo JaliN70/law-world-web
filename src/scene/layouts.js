@@ -22,14 +22,17 @@ export const LABELS_ZH = {
 /** 建築 GLB 占地半徑（8×8 m 基座） */
 export const BUILDING_HALF = 4;
 
-/** 手機直式 2×3，縮小橫向間距避免裁切 */
+/**
+ * 手機直式 2×3。全尺寸廣場外頂點半徑 7.2 m；8×8 底座需滿足
+ * hypot(bx,bz) − 4 ≳ 7.2 + 石徑間隙 → 中心距離 ≳ 11.2 m（採 x=±12、z=±10）。
+ */
 export const LAYOUT_MOBILE = {
-  fire: [-9, 0, 8],
-  building: [9, 0, 8],
-  telecom: [-9, 0, 0],
-  accessibility: [9, 0, 0],
-  water: [-9, 0, -8],
-  electrical: [9, 0, -8],
+  fire: [-12, 0, 10],
+  building: [12, 0, 10],
+  telecom: [-12, 0, 0],
+  accessibility: [12, 0, 0],
+  water: [-12, 0, -10],
+  electrical: [12, 0, -10],
 };
 
 const R_DESKTOP = 17;

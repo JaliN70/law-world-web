@@ -129,7 +129,7 @@ function treeSpots(layout, isMobile) {
     push(bx * 0.72 - nx * 2.4, bz * 0.72 - nz * 2.4, 'b', 1.05);
   });
 
-  const ring = isMobile ? 14 : 19;
+  const ring = isMobile ? 17 : 19;
   push(-ring, 4, 'c', 1.1);
   push(ring, 4, 'a', 0.9);
   push(-ring, -5, 'b', 1);
@@ -164,8 +164,7 @@ export async function upgradeDecoToGlb({ island, layout, isMobile, onReport }) {
   const shared = getSharedPaletteMaterial();
   if (shared) applySharedMaterial(decoRoot, shared);
 
-  const plazaScale = isMobile ? 0.6 : 1;
-  const stoneStart = 7.15 * plazaScale - 0.05;
+  const stoneStart = 7.15;
 
   if (templates.cliff) {
     const cliff = cloneDecoScene(templates.cliff);
@@ -184,11 +183,9 @@ export async function upgradeDecoToGlb({ island, layout, isMobile, onReport }) {
 
   if (templates.plaza) {
     const plaza = cloneDecoScene(templates.plaza);
-    const plazaParent = new THREE.Group();
-    plazaParent.name = 'deco_plaza_parent';
-    plazaParent.scale.setScalar(plazaScale);
-    plazaParent.add(plaza);
-    decoRoot.add(plazaParent);
+    plaza.position.set(0, 0, 0);
+    plaza.name = 'deco_plaza_ring';
+    decoRoot.add(plaza);
   } else {
     addCentralPlazaProcedural(island);
   }

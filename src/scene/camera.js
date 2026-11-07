@@ -20,7 +20,7 @@ export function fitFrustumToBounds(camera, width, height, bounds, isMobile) {
   const aspect = width / height;
   camera.userData.viewAspect = aspect;
 
-  const pad = isMobile ? 1.32 : 1.16;
+  const pad = isMobile ? 1.38 : 1.16;
   const cliffPad = 2.8;
   const halfX = bounds.spanX / 2 + cliffPad;
   const halfZ = bounds.spanZ / 2 + cliffPad;
