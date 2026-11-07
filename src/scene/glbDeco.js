@@ -129,6 +129,37 @@ function placeLinearStone(parent, x0, z0, x1, z1, t4, t1, name) {
   });
 }
 
+function hexRoadVertices(R) {
+  return HEX_ANGLES.map((deg) => {
+    const rad = ((deg - 30) * Math.PI) / 180;
+    return [Math.cos(rad) * R, -Math.sin(rad) * R];
+  });
+}
+
+/** 自原點射線與線段交點參數 t（O + t·d = A + u·(B−A)）。 */
+function raySegmentHitT(dirX, dirZ, ax, az, bx, bz) {
+  const ex = bx - ax;
+  const ez = bz - az;
+  const denom = dirX * ez - dirZ * ex;
+  if (Math.abs(denom) < 1e-9) return null;
+  const t = (ax * ez - az * ex) / denom;
+  const u = (ax * dirZ - az * dirX) / denom;
+  if (t <= 1e-5 || u < -1e-5 || u > 1 + 1e-5) return null;
+  return t;
+}
+
+function desktopRayRoadHit(dirX, dirZ) {
+  const verts = hexRoadVertices(DESKTOP_ROAD_R);
+  let best = Infinity;
+  for (let i = 0; i < verts.length; i++) {
+    const [x0, z0] = verts[i];
+    const [x1, z1] = verts[(i + 1) % verts.length];
+    const t = raySegmentHitT(dirX, dirZ, x0, z0, x1, z1);
+    if (t != null && t < best) best = t;
+  }
+  return Number.isFinite(best) ? best : null;
+}
+
 function radialRoadHit(bx, bz, isMobile) {
   const dist = Math.hypot(bx, bz);
   if (dist < 0.01) return null;
@@ -136,7 +167,9 @@ function radialRoadHit(bx, bz, isMobile) {
   const dirZ = bz / dist;
   const rotY = Math.atan2(bx, bz);
   if (!isMobile) {
-    return { s: DESKTOP_ROAD_R, x: dirX * DESKTOP_ROAD_R, z: dirZ * DESKTOP_ROAD_R, dirX, dirZ, rotY };
+    const s = desktopRayRoadHit(dirX, dirZ);
+    if (s == null) return null;
+    return { s, x: dirX * s, z: dirZ * s, dirX, dirZ, rotY };
   }
   const hits = [];
   if (dirX > 1e-6) hits.push((MOBILE_ROAD_BOUNDS.maxX - 0) / dirX);
@@ -157,10 +190,7 @@ function outerRoadWaypoints(isMobile) {
       [minX, minZ],
     ];
   }
-  return HEX_ANGLES.map((deg) => {
-    const rad = ((deg - 30) * Math.PI) / 180;
-    return [Math.cos(rad) * DESKTOP_ROAD_R, -Math.sin(rad) * DESKTOP_ROAD_R];
-  });
+  return hexRoadVertices(DESKTOP_ROAD_R);
 }
 
 function placeOuterRoadNetwork(parent, t4, t1, isMobile) {
@@ -176,7 +206,7 @@ function placeStoneSpurToRoad(parent, layoutEntry, hit, t4, t1, stoneToRoad, lab
   const [bx, , bz] = layoutEntry;
   const dist = Math.hypot(bx, bz);
   if (!hit || dist < 0.01) return;
-  const faceS = dist - BUILDING_HALF;
+  const faceS = dist + BUILDING_HALF;
   const junctionS = hit.s - 1.0;
   if (junctionS <= faceS + 0.05) return;
 
