@@ -29,7 +29,18 @@
 
       <main class="main-stage">
         <div id="canvas-wrap" class="canvas-wrap" aria-hidden="false">
-          <canvas id="world-canvas" role="img" aria-label="法規園區等角微縮世界地圖，可點選建築"></canvas>
+          <nav id="archipelago-minimap" class="archipelago-minimap" aria-label="群島小地圖">
+            <p class="minimap-title">群島小地圖</p>
+            <div class="minimap-hex" role="group" aria-label="六島">
+              <button type="button" class="minimap-node" data-island="fire" aria-label="消防">●</button>
+              <button type="button" class="minimap-node" data-island="building" aria-label="建築技術">●</button>
+              <button type="button" class="minimap-node" data-island="telecom" aria-label="電信">●</button>
+              <button type="button" class="minimap-node" data-island="accessibility" aria-label="無障礙">●</button>
+              <button type="button" class="minimap-node" data-island="water" aria-label="給排水">●</button>
+              <button type="button" class="minimap-node" data-island="electrical" aria-label="電氣">●</button>
+            </div>
+          </nav>
+          <canvas id="world-canvas" role="img" aria-label="法規園區群島等角地圖，可點選島嶼與建築"></canvas>
           <div id="labels-layer" class="labels-layer" aria-live="polite"></div>
           <div id="load-fallback" class="load-fallback hidden" role="alert">
             <p>3D 場景載入較久或不受支援。</p>
@@ -45,6 +56,7 @@
       </main>
 
       <footer class="thumb-zone" role="toolbar" aria-label="主要操作">
+        <button type="button" id="btn-back-archipelago" class="thumb-btn outlined hidden">返回群島</button>
         <button type="button" id="btn-quests" class="thumb-btn solid">任務 <span id="quest-thumb-count">0/6</span></button>
         <button type="button" id="btn-toggle-view" class="thumb-btn outlined">☰ 列表檢視</button>
       </footer>

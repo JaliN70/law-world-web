@@ -556,6 +556,62 @@ body {
   color: var(--muted);
 }
 
+.archipelago-minimap {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 25;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 16px rgba(15, 42, 68, 0.12);
+  max-width: 140px;
+}
+
+.minimap-title {
+  margin: 0 0 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--brand);
+}
+
+.minimap-hex {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.minimap-node {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--brand);
+  background: #fff;
+  color: transparent;
+  font-size: 0;
+  cursor: pointer;
+  padding: 0;
+}
+
+.minimap-node.visited {
+  background: color-mix(in srgb, var(--brand) 25%, white);
+}
+
+.minimap-node.done::after {
+  content: '✓';
+  color: var(--brand);
+  font-size: 0.9rem;
+}
+
+.minimap-node.active {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 35%, transparent);
+  background: color-mix(in srgb, var(--brand) 40%, white);
+}
+
+#btn-back-archipelago.hidden {
+  display: none;
+}
+
 @media (min-width: 900px) {
   .brand-title {
     font-size: 1.05rem;

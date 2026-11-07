@@ -1,4 +1,4 @@
-/** 建築座標預設（公尺，原點為廣場中心） */
+/** 群島 v1.2 — 六島環狀座標（手機／桌機同一套） */
 
 export const BUILDING_NAMES = [
   'fire',
@@ -9,7 +9,8 @@ export const BUILDING_NAMES = [
   'electrical',
 ];
 
-/** 場景中標籤短名稱（設計稿） */
+export const ISLAND_ORDER = ['fire', 'building', 'telecom', 'accessibility', 'water', 'electrical'];
+
 export const LABELS_ZH = {
   fire: '消防',
   building: '建築技術',
@@ -22,60 +23,69 @@ export const LABELS_ZH = {
 /** 建築 GLB 占地半徑（8×8 m 基座） */
 export const BUILDING_HALF = 4;
 
+export const ARCHIPELAGO_RING_R = 34;
+export const ISLAND_GRASS_R = 12;
+export const LOGO_PLATFORM_R = 4;
+
 /**
- * 手機直式 2×3。全尺寸廣場外頂點半徑 7.2 m；8×8 底座需滿足
- * hypot(bx,bz) − 4 ≳ 7.2 + 石徑間隙 → 中心距離 ≳ 11.2 m（採 x=±12、z=±10）。
+ * 順時針：01 消防北、02 建築技術、03 電信、04 無障礙、05 給排水、06 電氣
+ * 世界 −Z 為畫面上方。
  */
-export const LAYOUT_MOBILE = {
-  fire: [-12, 0, 10],
-  building: [12, 0, 10],
-  telecom: [-12, 0, 0],
-  accessibility: [12, 0, 0],
-  water: [-12, 0, -10],
-  electrical: [12, 0, -10],
+export const ISLAND_POSITIONS = {
+  fire: [0, 0, -34],
+  building: [29.445, 0, -17],
+  telecom: [29.445, 0, 17],
+  accessibility: [0, 0, 34],
+  water: [-29.445, 0, 17],
+  electrical: [-29.445, 0, -17],
 };
 
-const R_DESKTOP = 17;
-const HEX_ANGLES = [90, 30, -30, -90, -150, 150];
-const ORDER = ['fire', 'building', 'telecom', 'accessibility', 'water', 'electrical'];
+export function islandYawTowardCenter(id) {
+  const [wx, , wz] = ISLAND_POSITIONS[id];
+  return Math.atan2(-wx, -wz);
+}
 
-export function layoutDesktop() {
+/** @deprecated 群島版不再區分手機布局座標 */
+export function pickLayout() {
   const out = {};
-  ORDER.forEach((id, i) => {
-    const rad = (HEX_ANGLES[i] * Math.PI) / 180;
-    out[id] = [Math.cos(rad) * R_DESKTOP, 0, -Math.sin(rad) * R_DESKTOP];
+  ISLAND_ORDER.forEach((id) => {
+    out[id] = [0, 0, 0];
   });
   return out;
 }
 
-export function pickLayout(isMobile) {
-  return isMobile ? { ...LAYOUT_MOBILE } : layoutDesktop();
+export function computeArchipelagoBounds({ pad = 14 } = {}) {
+  const R = ARCHIPELAGO_RING_R + ISLAND_GRASS_R + pad;
+  return {
+    minX: -R,
+    maxX: R,
+    minZ: -R,
+    maxZ: R,
+    spanX: 2 * R,
+    spanZ: 2 * R,
+    islandRadius: R,
+    maxY: 16,
+  };
 }
 
-/**
- * 計算布局 + 島體外框，供相機 frustum 擬合。
- */
-export function computeWorldBounds(layout, { islandRadius = 32, maxBuildingY = 11 } = {}) {
-  let minX = -islandRadius;
-  let maxX = islandRadius;
-  let minZ = -islandRadius;
-  let maxZ = islandRadius;
-
-  for (const [x, , z] of Object.values(layout)) {
-    minX = Math.min(minX, x - BUILDING_HALF);
-    maxX = Math.max(maxX, x + BUILDING_HALF);
-    minZ = Math.min(minZ, z - BUILDING_HALF);
-    maxZ = Math.max(maxZ, z + BUILDING_HALF);
-  }
-
+export function computeIslandBounds(id, { pad = 3.5 } = {}) {
+  const [cx, , cz] = ISLAND_POSITIONS[id];
+  const r = ISLAND_GRASS_R + pad;
   return {
-    minX,
-    maxX,
-    minZ,
-    maxZ,
-    maxY: maxBuildingY,
-    islandRadius,
-    spanX: maxX - minX,
-    spanZ: maxZ - minZ,
+    minX: cx - r,
+    maxX: cx + r,
+    minZ: cz - r,
+    maxZ: cz + r,
+    spanX: 2 * r,
+    spanZ: 2 * r,
+    islandRadius: r,
+    maxY: 14,
+    centerX: cx,
+    centerZ: cz,
   };
+}
+
+/** 相容舊呼叫 */
+export function computeWorldBounds() {
+  return computeArchipelagoBounds();
 }

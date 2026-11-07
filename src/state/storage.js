@@ -11,6 +11,7 @@ const defaultState = () => ({
   reduceMotion: false,
   preferList: false,
   areaProgress: {},
+  nightMode: false,
 });
 
 export function loadProgress() {
