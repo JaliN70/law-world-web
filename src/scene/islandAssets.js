@@ -59,7 +59,7 @@ export async function installArchipelagoGlb({ islands, islandPickables, scene, o
   try {
     const { gltfLoader } = getGlbLoaders();
     const gltf = await gltfLoader.loadAsync(decoUrl('deco_logo_platform'));
-    const mat = extractSharedMaterial(gltf.scene);
+    const mat = extractSharedMaterial(gltf);
     if (mat) setSharedPaletteMaterial(mat);
     gltf.scene.traverse((o) => {
       if (o.isMesh && o.name !== 'logo_inlay' && mat) o.material = mat;
