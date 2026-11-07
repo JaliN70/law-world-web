@@ -19,10 +19,11 @@
       <header class="top-bar" role="banner">
         <div class="brand">
           <span class="brand-mark" aria-hidden="true"></span>
-          <span class="brand-title">法規園區</span>
+          <span class="brand-title">Tysic工程資訊部｜法規園區</span>
         </div>
-        <button type="button" id="btn-reduce-motion" class="icon-btn" title="減少動態效果" aria-pressed="false">
-          動態
+        <button type="button" id="btn-toggle-view-top" class="top-list-btn" aria-label="列表檢視">☰ 列表</button>
+        <button type="button" id="btn-reduce-motion" class="sr-only-focusable" title="減少動態效果" aria-pressed="false">
+          減少動態
         </button>
       </header>
 
@@ -44,34 +45,28 @@
       </main>
 
       <footer class="thumb-zone" role="toolbar" aria-label="主要操作">
-        <button type="button" id="btn-quests" class="thumb-btn outlined">任務</button>
-        <button type="button" id="btn-toggle-view" class="thumb-btn outlined">列表檢視</button>
+        <button type="button" id="btn-quests" class="thumb-btn solid">任務 <span id="quest-thumb-count">0/6</span></button>
+        <button type="button" id="btn-toggle-view" class="thumb-btn outlined">☰ 列表檢視</button>
       </footer>
 
       <div id="confirm-card" class="confirm-card hidden" role="dialog" aria-modal="true" aria-labelledby="card-title">
-        <button type="button" id="btn-card-close" class="card-close" aria-label="返回概覽">✕</button>
         <div id="card-body" class="card-body"></div>
       </div>
 
       <div id="tutorial-overlay" class="tutorial-overlay hidden" role="dialog" aria-labelledby="tutorial-title">
-        <div class="tutorial-panel">
+        <div id="tutorial-spotlight" class="tutorial-spotlight hidden" aria-hidden="true"></div>
+        <div class="tutorial-sheet">
+          <p class="tutorial-step" id="tutorial-step-label">教學 1 / 4</p>
           <h2 id="tutorial-title">歡迎來到法規園區</h2>
           <p id="tutorial-text"></p>
           <div class="tutorial-actions">
-            <button type="button" id="btn-tutorial-skip" class="text-link">略過教學</button>
+            <button type="button" id="btn-tutorial-skip" class="btn-outline">略過教學</button>
             <button type="button" id="btn-tutorial-next" class="btn-primary">下一步</button>
           </div>
         </div>
       </div>
 
-      <div id="quest-panel" class="quest-panel hidden" role="dialog" aria-labelledby="quest-title">
-        <div class="quest-panel-inner">
-          <h2 id="quest-title">任務進度</h2>
-          <p class="quest-note">任務只解鎖裝飾，不鎖法規或建築。</p>
-          <ul id="quest-list"></ul>
-          <button type="button" id="btn-quest-close" class="btn-primary">關閉</button>
-        </div>
-      </div>
+      <div id="quest-panel" class="quest-panel hidden" role="dialog" aria-labelledby="quest-title"></div>
 
       <div id="lesson-sheet" class="lesson-sheet hidden" role="dialog" aria-labelledby="lesson-heading"></div>
     </div>

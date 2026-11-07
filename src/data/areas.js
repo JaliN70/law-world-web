@@ -30,7 +30,7 @@ export const AREAS = {
     pcode: 'D0120029',
     amended: '民國 113 年 04 月 24 日',
     lawAllUrl: mojAll('D0120029'),
-    estMinutes: 12,
+    estMinutes: 3,
     decoration: 'deco_fire_hydrant',
     unlockMesh: 'unlock_fire_hydrant',
     categoriesSummary:

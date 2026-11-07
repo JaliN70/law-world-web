@@ -1,6 +1,3 @@
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import modelStats from '../data/model-stats.json';
 import {
   attachUnlockMesh,
@@ -8,22 +5,15 @@ import {
   measureLocalEnvelope,
   envelopeWithinTolerance,
 } from './buildings.js';
+import {
+  getGlbLoaders,
+  applySharedMaterial,
+  extractSharedMaterial,
+  setSharedPaletteMaterial,
+  baseUrl,
+} from './glbLoader.js';
 
 const BUILDING_IDS = ['fire', 'building', 'telecom', 'accessibility', 'water', 'electrical'];
-
-let sharedPaletteMaterial = null;
-
-function baseUrl(path) {
-  const base = import.meta.env.BASE_URL || '/';
-  return `${base}${path.replace(/^\//, '')}`;
-}
-
-function createDracoLoader() {
-  const draco = new DRACOLoader();
-  draco.setDecoderPath(baseUrl('draco/'));
-  draco.preload();
-  return draco;
-}
 
 function findMainMesh(root, id) {
   if (root.name === id && root.isMesh) return root;
@@ -34,44 +24,14 @@ function findMainMesh(root, id) {
   return found;
 }
 
-function applySharedMaterial(root, sharedMat) {
-  root.traverse((o) => {
-    if (o.isMesh && o.material) {
-      o.material = sharedMat;
-    }
-  });
-}
-
-function extractSharedMaterial(gltf) {
-  let tex = null;
-  gltf.scene.traverse((o) => {
-    if (o.isMesh?.material?.map && !tex) tex = o.material.map;
-  });
-  if (!tex) return null;
-  tex.flipY = false;
-  return new THREE.MeshStandardMaterial({
-    map: tex,
-    metalness: 0,
-    roughness: 0.88,
-    name: 'park_palette_shared',
-  });
-}
-
 function cdEnvelopeFor(id) {
   const row = modelStats.find((r) => r.name === id);
   if (!row) return null;
   return { x: row.sizeXYZ[0], y: row.max[1], z: row.sizeXYZ[2] };
 }
 
-/**
- * Load Draco GLBs, compare bbox, swap onto existing placement parents when safe.
- * Never non-uniformly scale — only 1:1 when GLB envelope matches CD stats (±5%).
- */
 export async function upgradeBuildingsToGlb({ buildings, onReport }) {
-  const draco = createDracoLoader();
-  const loader = new GLTFLoader();
-  loader.setDRACOLoader(draco);
-
+  const { gltfLoader } = getGlbLoaders();
   const report = { swapped: [], keptColorBlock: [], errors: [] };
 
   for (const id of BUILDING_IDS) {
@@ -83,11 +43,10 @@ export async function upgradeBuildingsToGlb({ buildings, onReport }) {
     const mvpMatchesCd = cdEnv && envelopeWithinTolerance(mvpEnv, cdEnv);
 
     try {
-      const gltf = await loader.loadAsync(baseUrl(`models/${id}.glb`));
-      if (!sharedPaletteMaterial) {
-        sharedPaletteMaterial = extractSharedMaterial(gltf);
-      }
-      if (sharedPaletteMaterial) applySharedMaterial(gltf.scene, sharedPaletteMaterial);
+      const gltf = await gltfLoader.loadAsync(baseUrl(`models/${id}.glb`));
+      const mat = extractSharedMaterial(gltf);
+      if (mat) setSharedPaletteMaterial(mat);
+      if (mat) applySharedMaterial(gltf.scene, mat);
 
       const glbEnv = measureLocalEnvelope(gltf.scene);
       const glbMatchesCd = cdEnv && envelopeWithinTolerance(glbEnv, cdEnv);
@@ -105,7 +64,6 @@ export async function upgradeBuildingsToGlb({ buildings, onReport }) {
           glbSize: glbEnv,
           cdSize: cdEnv,
         });
-        onReport?.(report);
         continue;
       }
 
@@ -114,8 +72,6 @@ export async function upgradeBuildingsToGlb({ buildings, onReport }) {
           id,
           mode: 'glb_canonical_1to1',
           note: 'MVP 色塊外框與 CD 不符；GLB 外框符合 model-stats，以 1:1 替換（未縮放）',
-          mvpSize: mvpEnv,
-          glbSize: glbEnv,
         });
       } else {
         report.swapped.push({ id, mode: 'mvp_and_cd_match' });
@@ -125,9 +81,7 @@ export async function upgradeBuildingsToGlb({ buildings, onReport }) {
       toRemove.forEach((c) => placement.remove(c));
 
       gltf.scene.traverse((o) => {
-        if (o.isMesh) {
-          o.userData.clickable = true;
-        }
+        if (o.isMesh) o.userData.clickable = true;
       });
       placement.add(gltf.scene);
       attachUnlockMesh(placement, id);
@@ -137,9 +91,7 @@ export async function upgradeBuildingsToGlb({ buildings, onReport }) {
     }
   }
 
-  draco.dispose();
   onReport?.(report);
-  if (import.meta.env.DEV) console.info('[law-world] GLB swap report', report);
   return report;
 }
 
@@ -151,3 +103,6 @@ export function collectPulseMeshes(buildings) {
   });
   return rings;
 }
+
+// re-export baseUrl for tests
+export { baseUrl };

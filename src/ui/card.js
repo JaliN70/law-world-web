@@ -1,27 +1,53 @@
 import { AREAS } from '../data/areas.js';
-import { renderSourceFooter } from './sourceFooter.js';
+
+const FOCUS_INTRO = {
+  fire: '從「消防設計」設置義務入門，認識滅火器、室內消防栓到排煙設備。',
+};
 
 export function renderConfirmCard(areaId, progress) {
   const a = AREAS[areaId];
   if (!a) return '';
   const quest = a.quests[0];
-  const done = progress.questsDone[quest?.id];
-  const questLabel = done ? '已完成本區任務' : `任務：${quest?.title || '進行中'}`;
+  const questDone = progress.questsDone[quest?.id];
+  const questDoneCount = questDone ? 1 : 0;
+  const questTotal = 3;
+  const intro = FOCUS_INTRO[areaId] || a.intro;
   const primaryLawUrl = a.lawAllUrl || a.siteUrl;
+
   return `
-    <h2 id="card-title" class="card-title">${a.buildingName}</h2>
-    <p class="card-domain">${a.domain}｜${a.lawName}</p>
-    <p class="card-intro">${a.intro}</p>
-    <p class="card-progress">${questLabel} · 預估 ${a.estMinutes} 分鐘</p>
-    <div class="card-actions thumb-actions">
+    <header class="focus-card-head">
+      <div class="focus-card-title-row">
+        <span class="focus-area-icon" aria-hidden="true">${areaIcon(areaId)}</span>
+        <h2 id="card-title" class="card-title">${a.buildingName}</h2>
+        <button type="button" id="btn-card-close-inline" class="focus-back" data-close-card>× 返回概覽</button>
+      </div>
+      <p class="card-domain">${a.domain}｜${a.lawName}</p>
+    </header>
+    <p class="card-intro focus-intro">${intro}</p>
+    <div class="focus-pills">
+      <span class="pill">本區任務 ${questDoneCount}/${questTotal}</span>
+      <span class="pill">教學約 ${a.estMinutes} 分鐘</span>
+    </div>
+    <div class="card-actions thumb-actions focus-actions">
       <button type="button" class="btn-primary" data-action="lesson" data-area="${areaId}">本站教學／任務</button>
       <button type="button" class="btn-secondary" data-action="external" data-area="${areaId}">進入法規站 ↗</button>
     </div>
-    <p class="card-links">
-      <a href="${primaryLawUrl}" target="_blank" rel="noopener noreferrer" data-action="law">查看原文</a>
+    <p class="card-links focus-law-link">
+      <a href="${primaryLawUrl}" target="_blank" rel="noopener noreferrer" class="text-link law-link">查看原文（全國法規資料庫） ↗</a>
     </p>
-    ${renderSourceFooter(areaId, { title: a.lawName, article: a.pcode ? `pcode ${a.pcode}` : '依該站分類' })}
   `;
+}
+
+function areaIcon(id) {
+  const map = {
+    fire: '🚒',
+    building: '🏛',
+    telecom: '📡',
+    accessibility: '♿',
+    water: '💧',
+    electrical: '⚡',
+  };
+  return map[id] || '📋';
 }
 
 export function bindCardActions(cardEl, handlers) {
@@ -38,4 +64,5 @@ export function bindCardActions(cardEl, handlers) {
       }
     });
   });
+  cardEl.querySelector('[data-close-card]')?.addEventListener('click', () => handlers.close?.());
 }

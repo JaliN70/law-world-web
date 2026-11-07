@@ -5,30 +5,40 @@ const DIR = new THREE.Vector3(1, Math.tan(ELEV), 1).normalize();
 
 export function createIsoCamera(width, height) {
   const aspect = width / height;
-  const frustum = 42;
-  const camera = new THREE.OrthographicCamera(
-    (-frustum * aspect) / 2,
-    (frustum * aspect) / 2,
-    frustum / 2,
-    -frustum / 2,
-    0.1,
-    300
-  );
+  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 300);
+  camera.userData.viewAspect = aspect;
   camera.position.copy(DIR.clone().multiplyScalar(80));
   camera.lookAt(0, 0, 0);
   camera.zoom = 1;
-  camera.updateProjectionMatrix();
   return camera;
 }
 
-export function resizeCamera(camera, width, height) {
+/**
+ * 依場景水平跨度 + 視窗比例推算正交 half-extent，避免手機裁切建築。
+ */
+export function fitFrustumToBounds(camera, width, height, bounds, isMobile) {
   const aspect = width / height;
-  const frustum = 42;
-  camera.left = (-frustum * aspect) / 2;
-  camera.right = (frustum * aspect) / 2;
-  camera.top = frustum / 2;
-  camera.bottom = -frustum / 2;
+  camera.userData.viewAspect = aspect;
+
+  const pad = isMobile ? 1.38 : 1.16;
+  const cliffPad = 2.8;
+  const halfX = bounds.spanX / 2 + cliffPad;
+  const halfZ = bounds.spanZ / 2 + cliffPad;
+  const islandHalf = bounds.islandRadius + cliffPad;
+
+  const needY = Math.max(halfX, halfZ, islandHalf) * pad;
+  const frustumY = Math.max(needY, needY / aspect);
+
+  camera.left = (-frustumY * aspect) / 2;
+  camera.right = (frustumY * aspect) / 2;
+  camera.top = frustumY / 2;
+  camera.bottom = -frustumY / 2;
+  camera.userData.baseFrustumY = frustumY;
   camera.updateProjectionMatrix();
+}
+
+export function resizeCamera(camera, width, height, bounds, isMobile) {
+  if (bounds) fitFrustumToBounds(camera, width, height, bounds, isMobile);
 }
 
 export class CameraRig {
@@ -39,7 +49,12 @@ export class CameraRig {
     this.zoom = 1;
     this.minZoom = 0.8;
     this.maxZoom = 2.2;
-    this.bounds = 28;
+    this.bounds = 22;
+    this.overviewZoom = 1;
+  }
+
+  setPanBounds(islandRadius) {
+    this.bounds = islandRadius * 0.55;
   }
 
   setYaw(deg, reduced) {
@@ -63,13 +78,13 @@ export class CameraRig {
     const p = building.position;
     this.target.set(p.x * 0.55, 0, p.z * 0.55);
     this.setYaw(focusYaw);
-    this.setZoom(1.9);
+    this.setZoom(1.85);
   }
 
   resetOverview() {
     this.target.set(0, 0, 0);
     this.setYaw(0);
-    this.setZoom(1);
+    this.setZoom(this.overviewZoom);
   }
 
   update() {
@@ -82,6 +97,7 @@ export class CameraRig {
   }
 
   worldToScreen(point, width, height) {
+    this.update();
     const v = point.clone().project(this.camera);
     return {
       x: ((v.x + 1) / 2) * width,
