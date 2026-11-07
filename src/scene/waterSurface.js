@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 
-/** 草地頂面 Y=0；浪幅 ±0.03 m。基準下移使浪峰始終低於島面／碼頭。 */
+/** 草地頂面 Y=0、碼頭約 +0.012 m；浪幅 ±0.03 m。基準下移露出 island_cliff 土褐／岩壁層。 */
 export const WATER_WAVE_AMP = 0.03;
-export const WATER_BASE_Y = -(WATER_WAVE_AMP + 0.03);
+/** 浪峰約 -0.67 m（低於草地與碼頭） */
+export const WATER_BASE_Y = -0.7;
 
 /** 單片程式海面（±wave / ~6s） */
 export function createWaterSurface({ reducedMotion } = {}) {

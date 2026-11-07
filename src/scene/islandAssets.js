@@ -1,6 +1,7 @@
 import { loadGlbScene, getGlbLoaders, extractSharedMaterial, setSharedPaletteMaterial } from './glbLoader.js';
 import { ISLAND_ORDER } from './layouts.js';
 import { attachIslandExtras } from './islandTerrain.js';
+import { createLogoPedestal } from './logoPedestal.js';
 
 function decoUrl(name) {
   const base = import.meta.env.BASE_URL || '/';
@@ -78,9 +79,12 @@ export async function installArchipelagoGlb({ islands, islandPickables, scene, o
     gltf.scene.name = 'logo_platform_root';
     gltf.scene.position.set(0, 0, 0);
     gltf.scene.userData.nonInteractive = true;
+    let platformMesh = null;
     gltf.scene.traverse((o) => {
       if (o.isMesh) o.renderOrder = 1;
+      if (o.name === 'logo_platform') platformMesh = o;
     });
+    gltf.scene.add(createLogoPedestal(platformMesh));
     scene.add(gltf.scene);
     report.ok.push('deco_logo_platform.glb');
   } catch (e) {
