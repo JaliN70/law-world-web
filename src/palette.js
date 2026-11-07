@@ -1,0 +1,20 @@
+/** 園區色盤（設計方案 v1.0） */
+export const PALETTE = {
+  brand: 0x1f4e79,
+  logoRed: 0xff0000,
+  fire: 0xb5533c,
+  building: 0x9ca3af,
+  telecom: 0x3b6fb6,
+  accessibility: 0x7fa77f,
+  water: 0x3e8e8a,
+  electrical: 0x8b6fc9,
+  road: 0xd1d5db,
+  grass: 0x86b86b,
+  canopy: 0x5e9e4f,
+  soil: 0xc9a27a,
+  roofLight: 0xf5f1e8,
+  windowDark: 0x4b5563,
+  tactileYellow: 0xf2c94c,
+  waterBar: 0x5dade2,
+  error: 0x9f1239,
+};

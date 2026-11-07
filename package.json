@@ -1,0 +1,18 @@
+{
+  "name": "law-world-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "法規園區 — 互動式等角微縮世界總入口",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.181.0"
+  },
+  "devDependencies": {
+    "vite": "^7.2.1"
+  }
+}
