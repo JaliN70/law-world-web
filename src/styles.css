@@ -218,7 +218,8 @@ body {
 .confirm-card,
 .lesson-sheet,
 .tutorial-overlay,
-.quest-panel {
+.quest-panel,
+.certificate-panel {
   position: fixed;
   z-index: 40;
 }
@@ -436,11 +437,121 @@ body {
   margin-top: 16px;
 }
 
-.quest-panel {
+.quest-panel,
+.certificate-panel {
   inset: 0;
   background: rgba(15, 23, 42, 0.4);
   display: flex;
   align-items: flex-end;
+}
+
+.certificate-panel {
+  z-index: 45;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.certificate-panel.cert-fade-in {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .certificate-panel {
+    transition: none;
+  }
+}
+
+.cert-sheet {
+  width: 100%;
+  max-height: 78vh;
+  overflow: auto;
+  background: #fff;
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 0 16px calc(20px + env(safe-area-inset-bottom));
+}
+
+.cert-brand-bar {
+  height: 6px;
+  background: var(--brand);
+  border-radius: var(--radius) var(--radius) 0 0;
+  margin: 0 -16px 14px;
+}
+
+.cert-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.cert-title {
+  margin: 0;
+  color: var(--brand);
+  font-size: 1.25rem;
+  grid-column: 1 / -1;
+}
+
+.cert-close {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.cert-lead {
+  line-height: 1.55;
+  margin: 0 0 14px;
+  font-size: 0.95rem;
+}
+
+.cert-areas {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.cert-areas li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.92rem;
+}
+
+.cert-areas li:last-child {
+  border-bottom: none;
+}
+
+.cert-areas strong {
+  color: var(--brand);
+}
+
+.cert-areas span {
+  color: var(--muted);
+  text-align: right;
+}
+
+.cert-footnote {
+  font-size: 0.86rem;
+  color: var(--muted);
+  margin: 0 0 16px;
+  line-height: 1.45;
+}
+
+.cert-dismiss {
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.quest-cert-cta {
+  margin: 0 0 12px;
+}
+
+.quest-cert-cta .btn-primary {
+  width: 100%;
 }
 
 .quest-sheet {
@@ -554,6 +665,62 @@ body {
   border-top: 1px solid #e5e7eb;
   font-size: 0.85rem;
   color: var(--muted);
+}
+
+.archipelago-minimap {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 25;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 16px rgba(15, 42, 68, 0.12);
+  max-width: 140px;
+}
+
+.minimap-title {
+  margin: 0 0 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--brand);
+}
+
+.minimap-hex {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.minimap-node {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--brand);
+  background: #fff;
+  color: transparent;
+  font-size: 0;
+  cursor: pointer;
+  padding: 0;
+}
+
+.minimap-node.visited {
+  background: color-mix(in srgb, var(--brand) 25%, white);
+}
+
+.minimap-node.done::after {
+  content: '✓';
+  color: var(--brand);
+  font-size: 0.9rem;
+}
+
+.minimap-node.active {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 35%, transparent);
+  background: color-mix(in srgb, var(--brand) 40%, white);
+}
+
+#btn-back-archipelago.hidden {
+  display: none;
 }
 
 @media (min-width: 900px) {

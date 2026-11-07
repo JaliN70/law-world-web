@@ -1,24 +1,29 @@
 import * as THREE from 'three';
 import { createWorldScene, setBuildingSaturation, applyUnlocks } from './scene/world.js';
+import { updateShorelineGlowFade, resetShorelineGlow } from './scene/shorelineGlow.js';
 import { createIsoCamera, resizeCamera, CameraRig } from './scene/camera.js';
 import { attachPanZoom } from './scene/controls.js';
 import { TourDirector } from './scene/tour.js';
-import { pickBuilding } from './interaction/raycast.js';
-import { LABELS_ZH, BUILDING_NAMES } from './scene/layouts.js';
+import { pickBuilding, pickIsland } from './interaction/raycast.js';
+import { LABELS_ZH, BUILDING_NAMES, computeIslandBounds } from './scene/layouts.js';
+import { updateWaterSurface } from './scene/waterSurface.js';
 import { AREAS } from './data/areas.js';
 import {
   loadProgress,
   saveProgress,
   markVisitDay,
-  countAreasWithQuest,
+  countIntroQuestsComplete,
+  isLawPassComplete,
 } from './state/storage.js';
 import { renderConfirmCard, bindCardActions } from './ui/card.js';
 import { openLessonSheet } from './ui/lesson.js';
 import { renderListCards } from './ui/listView.js';
 import { renderQuestPanel } from './ui/questPanel.js';
+import { showCertificatePanel } from './ui/certificate.js';
 import { countCompletedQuests } from './data/parkQuests.js';
 import { upgradeBuildingsToGlb, collectPulseMeshes } from './scene/glbBuildings.js';
-import { upgradeDecoToGlb } from './scene/glbDeco.js';
+import { upgradeIslandsDeco } from './scene/islandGlbDeco.js';
+import { installArchipelagoGlb } from './scene/islandAssets.js';
 import modelStats from './data/model-stats.json';
 
 const canvas = document.getElementById('world-canvas');
@@ -32,9 +37,17 @@ const lessonSheet = document.getElementById('lesson-sheet');
 const tutorialOverlay = document.getElementById('tutorial-overlay');
 const tutorialSpotlight = document.getElementById('tutorial-spotlight');
 const questPanel = document.getElementById('quest-panel');
+const certificatePanel = document.getElementById('certificate-panel');
+const minimapEl = document.getElementById('archipelago-minimap');
+const btnBackArchipelago = document.getElementById('btn-back-archipelago');
 
 const progress = loadProgress();
 markVisitDay(progress);
+if (isLawPassComplete(progress)) {
+  progress.unlocks.deco_logo_inlay = true;
+  progress.unlocks.deco_shore_glow = true;
+  saveProgress(progress);
+}
 
 const mqMobile = window.matchMedia('(max-width: 768px), (max-aspect-ratio: 1/1)');
 let isMobile = mqMobile.matches;
@@ -57,6 +70,8 @@ let buildings = world.buildings;
 let clickable = world.clickable;
 let pulseMeshes = world.pulseMeshes;
 let worldBounds = world.worldBounds;
+let islandPickables = world.islandPickables;
+let waterMesh = world.water;
 
 const labelHeights = Object.fromEntries(modelStats.map((r) => [r.name, r.max[1]]));
 
@@ -66,8 +81,10 @@ updateQuestThumb();
 
 const tour = new TourDirector({
   rig,
+  camera,
   buildings,
   reducedMotion,
+  isMobile,
   onBeat: (type, i) => {
     if (type === 'label') showLabelsUpTo(i);
     if (type === 'labels-all') showLabelsUpTo(6);
@@ -94,7 +111,7 @@ BUILDING_NAMES.forEach((id) => {
   btn.className = 'b-label hidden';
   btn.textContent = LABELS_ZH[id];
   btn.dataset.building = id;
-  btn.addEventListener('click', () => onBuildingSelect(id));
+  btn.addEventListener('click', () => onLabelActivate(id));
   labelsLayer.appendChild(btn);
   labelEls[id] = btn;
 });
@@ -118,36 +135,51 @@ async function loadBuildingModels() {
         window.__lawWorldGlbReport = report;
       },
     });
-    await upgradeDecoToGlb({
-      island: world.island,
-      layout: world.layout,
-      isMobile,
+    await installArchipelagoGlb({
+      islands: world.islands,
+      islandPickables,
+      scene,
+      onReport: (report) => {
+        window.__lawWorldIslandGlbReport = report;
+      },
+    });
+    await upgradeIslandsDeco({
+      islands: world.islands,
       onReport: (report) => {
         window.__lawWorldDecoReport = report;
       },
     });
     pulseMeshes = collectPulseMeshes(buildings);
-    applyUnlocks(scene, progress.unlocks);
+    applyUnlocks(scene, progress.unlocks, { reducedMotion });
   } catch (e) {
     console.warn('[law-world] GLB load failed, using fallbacks', e);
   }
 }
 
 function fitCamera() {
-  resizeCamera(camera, width, height, worldBounds, isMobile);
+  const bounds =
+    tour.view === 'island' && tour.activeIsland
+      ? computeIslandBounds(tour.activeIsland, { pad: isMobile ? 4.5 : 3.8 })
+      : worldBounds;
+  resizeCamera(camera, width, height, bounds, isMobile);
+  tour.viewportW = width;
+  tour.viewportH = height;
 }
 
 function rebuildLayout() {
+  resetShorelineGlow();
   world = createWorldScene({ isMobile, reducedMotion });
   scene = world.scene;
   buildings = world.buildings;
   clickable = world.clickable;
   pulseMeshes = world.pulseMeshes;
   worldBounds = world.worldBounds;
+  islandPickables = world.islandPickables;
+  waterMesh = world.water;
   tour.buildings = buildings;
   rig.setPanBounds(worldBounds.islandRadius);
   fitCamera();
-  applyUnlocks(scene, progress.unlocks);
+  applyUnlocks(scene, progress.unlocks, { reducedMotion });
   if (focusedId) setBuildingSaturation(buildings, focusedId);
   loadBuildingModels();
 }
@@ -161,7 +193,8 @@ function updateLabels() {
   BUILDING_NAMES.forEach((id) => {
     const g = buildings[id];
     if (!g) return;
-    const top = g.position.clone();
+    const top = new THREE.Vector3();
+    g.getWorldPosition(top);
     top.y += (labelHeights[id] || 8) + 1;
     const s = rig.worldToScreen(top, width, height);
     const el = labelEls[id];
@@ -189,7 +222,8 @@ function updateTutorialSpotlight(buildingId) {
     return;
   }
   const g = buildings[buildingId];
-  const top = g.position.clone();
+  const top = new THREE.Vector3();
+  g.getWorldPosition(top);
   top.y += (labelHeights[buildingId] || 8) * 0.55;
   const s = rig.worldToScreen(top, width, height);
   const size = Math.min(width, height) * (isMobile ? 0.34 : 0.22);
@@ -200,17 +234,53 @@ function updateTutorialSpotlight(buildingId) {
   tutorialSpotlight.style.height = `${size}px`;
 }
 
+let islandFocusedId = null;
+
+function onIslandSelect(id, { openBuildingAfter } = {}) {
+  if (panLocked) return;
+  if (tour.view === 'island' && tour.activeIsland === id && !openBuildingAfter) return;
+  closeCard();
+  islandFocusedId = id;
+  if (!progress.areaProgress[id]) progress.areaProgress[id] = {};
+  progress.areaProgress[id].visited = true;
+  saveProgress(progress);
+  const dur = reducedMotion ? 0.2 : 0.8;
+  activeTransition = tour.flyToIsland(id, dur, () => {
+    fitCamera();
+    updateMinimap();
+    if (openBuildingAfter) onBuildingSelect(openBuildingAfter);
+  });
+  pushHistoryState({ view: 'island', island: id });
+}
+
 function onBuildingSelect(id) {
-  if (panLocked && !focusedId) return;
+  if (panLocked) return;
+  if (tour.view !== 'island' || tour.activeIsland !== id) {
+    onIslandSelect(id, { openBuildingAfter: id });
+    return;
+  }
   const b = buildings[id];
   if (!b) return;
-  const switching = focusedId && focusedId !== id;
   focusedId = id;
   setBuildingSaturation(buildings, id);
-  activeTransition = tour.focusTransition(b, switching ? 0.5 : 0.6, () => {
+  activeTransition = tour.focusBuilding(b, () => {
     openCard(id);
   });
-  pushHistoryState();
+  pushHistoryState({ view: 'card', island: id });
+}
+
+function onLabelActivate(id) {
+  if (tour.view === 'overview') onIslandSelect(id);
+  else onBuildingSelect(id);
+}
+
+function goOverview() {
+  closeCard();
+  islandFocusedId = null;
+  activeTransition = tour.flyToOverview(reducedMotion ? 0.2 : 0.8, () => {
+    fitCamera();
+    updateMinimap();
+  });
 }
 
 function openCard(areaId) {
@@ -220,8 +290,7 @@ function openCard(areaId) {
     external: (id) => window.open(AREAS[id].siteUrl, '_blank', 'noopener'),
     lesson: (id) => {
       openLessonSheet(lessonSheet, id, progress, () => {
-        applyUnlocks(scene, progress.unlocks);
-        maybeCrossUnlocks();
+        maybeCrossUnlocks({ fromQuest: true });
         updateQuestThumb();
       });
     },
@@ -234,25 +303,67 @@ function closeCard() {
   lessonSheet.classList.add('hidden');
   focusedId = null;
   setBuildingSaturation(buildings, null);
-  activeTransition = tour.backTransition(0.5);
 }
 
-function pushHistoryState() {
-  history.pushState({ lawWorld: 'focus' }, '');
+function pushHistoryState(extra = {}) {
+  history.pushState({ lawWorld: 'nav', ...extra }, '');
 }
 
 window.addEventListener('popstate', () => {
   if (!confirmCard.classList.contains('hidden')) closeCard();
+  else if (tour.view === 'island') goOverview();
 });
 
 attachPanZoom(canvas, rig, {
   reducedMotion,
   onTap: (x, y) => {
     if (panLocked) return;
-    const id = pickBuilding(camera, clickable, x, y, canvas);
-    if (id) onBuildingSelect(id);
-    else if (!confirmCard.classList.contains('hidden')) closeCard();
+    if (tour.view === 'island') {
+      const id = pickBuilding(camera, clickable, x, y, canvas);
+      if (id) onBuildingSelect(id);
+      else if (confirmCard.classList.contains('hidden')) goOverview();
+      else closeCard();
+      return;
+    }
+    const island = pickIsland(camera, islandPickables, x, y, canvas);
+    if (island) onIslandSelect(island);
+    else {
+      const id = pickBuilding(camera, clickable, x, y, canvas);
+      if (id) onIslandSelect(id);
+    }
   },
+});
+
+btnBackArchipelago?.addEventListener('click', goOverview);
+
+const QUEST_PREFIX = {
+  fire: 'F',
+  building: 'B',
+  telecom: 'T',
+  accessibility: 'A',
+  water: 'W',
+  electrical: 'E',
+};
+
+function updateMinimap() {
+  if (!minimapEl) return;
+  btnBackArchipelago?.classList.toggle('hidden', tour.view !== 'island');
+  minimapEl.querySelectorAll('[data-island]').forEach((btn) => {
+    const id = btn.dataset.island;
+    const visited = progress.areaProgress?.[id]?.visited;
+    const p = QUEST_PREFIX[id] || '';
+    const done = p && Object.keys(progress.questsDone).some((k) => k.startsWith(p));
+    btn.classList.toggle('active', tour.activeIsland === id);
+    btn.classList.toggle('visited', Boolean(visited));
+    btn.classList.toggle('done', done);
+    btn.setAttribute('aria-current', tour.activeIsland === id ? 'true' : 'false');
+  });
+}
+
+minimapEl?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-island]');
+  if (!btn || panLocked) return;
+  onIslandSelect(btn.dataset.island);
 });
 
 document.getElementById('btn-toggle-view').addEventListener('click', toggleList);
@@ -275,12 +386,21 @@ function showList(show) {
 renderListCards(listCards);
 listCards.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-list-lesson]');
-  if (btn) openLessonSheet(lessonSheet, btn.dataset.listLesson, progress, () => applyUnlocks(scene, progress.unlocks));
+  if (btn)
+    openLessonSheet(lessonSheet, btn.dataset.listLesson, progress, () => maybeCrossUnlocks({ fromQuest: true }));
 });
+
+function openCertificate({ keepQuestOpen = false } = {}) {
+  showCertificatePanel(certificatePanel, { reducedMotion });
+  if (!keepQuestOpen) questPanel.classList.add('hidden');
+}
 
 function openQuests() {
   renderQuestPanel(questPanel, progress);
   questPanel.classList.remove('hidden');
+  questPanel.querySelector('#btn-open-cert')?.addEventListener('click', () => {
+    openCertificate({ keepQuestOpen: false });
+  });
   questPanel.querySelector('#btn-quest-close')?.addEventListener('click', () => {
     questPanel.classList.add('hidden');
   });
@@ -293,25 +413,41 @@ function openQuests() {
   );
 }
 
-function maybeCrossUnlocks() {
-  const n = countAreasWithQuest(progress);
-  if (n >= 3) progress.unlocks.deco_street_lamp = true;
-  if (n >= 6) progress.unlocks.deco_plaza_badge = true;
+function maybeCrossUnlocks({ fromQuest = false } = {}) {
+  const introDone = countIntroQuestsComplete(progress);
+  if (introDone >= 3) progress.unlocks.lamp_dock = true;
+  if (progress.questsDone.F2 && progress.questsDone.B3) {
+    progress.unlocks.unlock_flag_fire = true;
+    progress.unlocks.unlock_flag_building = true;
+  }
+  if (progress.visitDays.length >= 4) progress.unlocks.night_mode = true;
+  const lawPass = isLawPassComplete(progress);
+  if (lawPass) {
+    progress.unlocks.deco_logo_inlay = true;
+    progress.unlocks.deco_shore_glow = true;
+  }
   saveProgress(progress);
-  applyUnlocks(scene, progress.unlocks);
+  applyUnlocks(scene, progress.unlocks, { reducedMotion });
   updateQuestThumb();
+  updateMinimap();
+
+  if (fromQuest && lawPass && !progress.lawPassCertAutoShown) {
+    progress.lawPassCertAutoShown = true;
+    saveProgress(progress);
+    openCertificate();
+  }
 }
 
 /* Tutorial */
 const TUTORIAL_STEPS = [
   {
-    title: '歡迎來到法規園區',
-    body: '法規園區有六個領域，每棟建築都有自己的導讀與任務。',
+    title: '一法規，一座島',
+    body: '六座島圍成一圈，中央是品牌平台。點一座島，鏡頭會飛越水面到該島。',
     spotlight: null,
   },
   {
-    title: '點一下任一棟建築',
-    body: '每棟建築是一個法規領域。點選後鏡頭推近，出現確認卡片，可在本站開始該區教學。全部建築一開始就能進入。',
+    title: '再點建築開啟確認卡',
+    body: '到島上後點建築或標籤，可開啟本站教學／任務。六島從第一秒都能進，任務只解鎖裝飾。',
     spotlight: 'fire',
   },
   {
@@ -431,6 +567,8 @@ function animate() {
   tour.applyLifts();
   if (activeTransition) activeTransition = activeTransition(dt) || null;
   rig.update();
+  updateWaterSurface(waterMesh, clock.elapsedTime);
+  updateShorelineGlowFade(dt);
 
   if (!reducedMotion) {
     const t = performance.now() * 0.002;
@@ -455,8 +593,9 @@ if (progress.introSeen || progress.visited) {
   runTutorial();
 }
 
-applyUnlocks(scene, progress.unlocks);
+applyUnlocks(scene, progress.unlocks, { reducedMotion });
 loadBuildingModels();
+updateMinimap();
 clearTimeout(loadTimer);
 document.getElementById('load-fallback').classList.add('hidden');
 onResize();

@@ -1,5 +1,7 @@
 const KEY = 'law-world-progress-v1';
 
+export const LAW_PASS_INTRO_QUESTS = ['F1', 'B1', 'T1', 'A1', 'W1', 'E1'];
+
 const defaultState = () => ({
   visited: false,
   introSeen: false,
@@ -11,7 +13,18 @@ const defaultState = () => ({
   reduceMotion: false,
   preferList: false,
   areaProgress: {},
+  nightMode: false,
+  /** 法規通達成當下是否已自動顯示過證書（重整後不重複跳出） */
+  lawPassCertAutoShown: false,
 });
+
+export function countIntroQuestsComplete(state) {
+  return LAW_PASS_INTRO_QUESTS.filter((id) => state.questsDone[id]).length;
+}
+
+export function isLawPassComplete(state) {
+  return LAW_PASS_INTRO_QUESTS.every((id) => state.questsDone[id]);
+}
 
 export function loadProgress() {
   try {

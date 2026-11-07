@@ -1,6 +1,6 @@
 /** 園區任務列表（對齊設計稿 05-quest-panel.png + PDF §4.4） */
 
-import { countAreasWithQuest } from '../state/storage.js';
+import { countAreasWithQuest, countIntroQuestsComplete, isLawPassComplete } from '../state/storage.js';
 
 export const PARK_QUESTS = [
   {
@@ -45,7 +45,7 @@ export const PARK_QUESTS = [
     cross: true,
     title: '三域巡禮',
     desc: '完成 3 個領域的入門任務',
-    unlock: '解鎖：園區路燈',
+    unlock: '解鎖：各島碼頭路燈',
     unlockProgress: true,
     needAreas: 3,
   },
@@ -54,7 +54,7 @@ export const PARK_QUESTS = [
     cross: true,
     title: '法規通',
     desc: '六區入門任務全部完成',
-    unlock: '解鎖：法規通完成態',
+    unlock: '解鎖：中央微光＋證書＋岸緣光',
     unlockProgress: true,
     needAreas: 6,
   },
@@ -66,6 +66,8 @@ export function countCompletedQuests(progress) {
 
 export function isQuestDone(quest, progress) {
   if (quest.cross) {
+    if (quest.id === 'cross-law') return isLawPassComplete(progress);
+    if (quest.id === 'cross-3') return countIntroQuestsComplete(progress) >= 3;
     const n = countAreasWithQuest(progress);
     return n >= (quest.needAreas || 6);
   }
@@ -75,11 +77,11 @@ export function isQuestDone(quest, progress) {
 export function questProgressLabel(quest, progress) {
   if (!quest.unlockProgress) return quest.unlock;
   if (quest.id === 'cross-3') {
-    const n = countAreasWithQuest(progress);
+    const n = countIntroQuestsComplete(progress);
     return `${quest.unlock} ${Math.min(n, 3)}/3`;
   }
   if (quest.id === 'cross-law') {
-    const n = countAreasWithQuest(progress);
+    const n = countIntroQuestsComplete(progress);
     return `${quest.unlock} ${Math.min(n, 6)}/6`;
   }
   if (quest.id === 'W1') {

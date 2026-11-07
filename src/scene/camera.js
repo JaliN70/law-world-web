@@ -54,7 +54,7 @@ export class CameraRig {
   }
 
   setPanBounds(islandRadius) {
-    this.bounds = islandRadius * 0.55;
+    this.bounds = islandRadius * 0.42;
   }
 
   setYaw(deg, reduced) {
@@ -72,13 +72,6 @@ export class CameraRig {
     const scale = 0.045 / this.zoom;
     this.target.x = THREE.MathUtils.clamp(this.target.x - dx * scale, -this.bounds, this.bounds);
     this.target.z = THREE.MathUtils.clamp(this.target.z - dz * scale, -this.bounds, this.bounds);
-  }
-
-  focusBuilding(building, focusYaw = 8) {
-    const p = building.position;
-    this.target.set(p.x * 0.55, 0, p.z * 0.55);
-    this.setYaw(focusYaw);
-    this.setZoom(1.85);
   }
 
   resetOverview() {
