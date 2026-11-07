@@ -54,12 +54,12 @@ export function applySharedMaterial(root, sharedMat = sharedPaletteMaterial) {
   });
 }
 
-export async function loadGlbScene(url) {
+export async function loadGlbScene(url, { applyPalette = true } = {}) {
   const { gltfLoader } = getGlbLoaders();
   const gltf = await gltfLoader.loadAsync(url);
   const mat = extractSharedMaterial(gltf);
   if (mat) setSharedPaletteMaterial(mat);
-  if (sharedPaletteMaterial) applySharedMaterial(gltf.scene);
+  if (applyPalette && sharedPaletteMaterial) applySharedMaterial(gltf.scene);
   return gltf.scene;
 }
 

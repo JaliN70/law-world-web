@@ -9,8 +9,7 @@ import {
   computeArchipelagoBounds,
 } from './layouts.js';
 import { createWaterSurface } from './waterSurface.js';
-import { createLogoPlatform, applyLogoInlayGlow } from './logoPlatform.js';
-import { buildIslandTerrain } from './islandTerrain.js';
+import { applyLogoInlayGlow } from './logoPlatform.js';
 
 export function createWorldScene({ isMobile, reducedMotion }) {
   const scene = new THREE.Scene();
@@ -39,10 +38,6 @@ export function createWorldScene({ isMobile, reducedMotion }) {
     islandGroup.position.set(wx, 0, wz);
     islandGroup.rotation.y = islandYawTowardCenter(id);
 
-    const terrain = buildIslandTerrain(id);
-    islandGroup.add(terrain.root);
-    islandPickables.push(terrain.grass);
-
     const placement = map[id];
     if (placement) {
       root.remove(placement);
@@ -55,7 +50,6 @@ export function createWorldScene({ isMobile, reducedMotion }) {
   });
 
   scene.add(archipelago);
-  scene.add(createLogoPlatform());
 
   const buildings = map;
   const clickable = Object.values(map);

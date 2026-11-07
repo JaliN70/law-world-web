@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import { loadGlbScene, cloneDecoScene, getSharedPaletteMaterial } from './glbLoader.js';
-import { ISLAND_GRASS_R, BUILDING_HALF } from './layouts.js';
+import { loadGlbScene, cloneDecoScene } from './glbLoader.js';
+import { BUILDING_HALF } from './layouts.js';
 
-const DOCK_Z = ISLAND_GRASS_R - 1.1;
+/** 碼頭本地 +Z：10.8–13.8；石徑沿 +Z 從建築前緣鋪至碼頭內緣（不含碼頭本體） */
 const PATH_START_Z = BUILDING_HALF + 0.5;
-const PATH_END_Z = DOCK_Z - 0.6;
+const PATH_END_Z = 10.0;
 
 function decoUrl(name) {
   const base = import.meta.env.BASE_URL || '/';
@@ -38,11 +38,11 @@ function placeLocalRun(parent, t4, t1, startZ, endZ) {
 }
 
 function treeSpotsLocal() {
-  const r = ISLAND_GRASS_R * 0.78;
+  const r = 9.2;
   const ang = [0.9, 2.4, 4.0, 5.5];
   return ang.map((a, i) => ({
     x: Math.sin(a) * r,
-    z: -Math.cos(a) * r,
+    z: -Math.abs(Math.cos(a) * r),
     type: ['a', 'b', 'c', 'a'][i],
     scale: 0.9 + (i % 3) * 0.06,
   }));
@@ -67,7 +67,6 @@ export async function upgradeIslandsDeco({ islands, onReport }) {
     }
   }
 
-  const shared = getSharedPaletteMaterial();
   Object.values(islands).forEach((island) => {
     if (templates.stone4 && templates.stone1) {
       placeLocalRun(island, templates.stone4, templates.stone1, PATH_START_Z, PATH_END_Z);
@@ -83,11 +82,6 @@ export async function upgradeIslandsDeco({ islands, onReport }) {
         tree.scale.setScalar(spot.scale);
         tree.name = `deco_tree_glb_${i}`;
         island.add(tree);
-      });
-    }
-    if (shared) {
-      island.traverse((o) => {
-        if (o.isMesh && o.material && o.name.startsWith('deco_')) o.material = shared;
       });
     }
   });

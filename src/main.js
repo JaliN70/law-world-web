@@ -20,6 +20,7 @@ import { renderQuestPanel } from './ui/questPanel.js';
 import { countCompletedQuests } from './data/parkQuests.js';
 import { upgradeBuildingsToGlb, collectPulseMeshes } from './scene/glbBuildings.js';
 import { upgradeIslandsDeco } from './scene/islandGlbDeco.js';
+import { installArchipelagoGlb } from './scene/islandAssets.js';
 import modelStats from './data/model-stats.json';
 
 const canvas = document.getElementById('world-canvas');
@@ -123,6 +124,14 @@ async function loadBuildingModels() {
       buildings,
       onReport: (report) => {
         window.__lawWorldGlbReport = report;
+      },
+    });
+    await installArchipelagoGlb({
+      islands: world.islands,
+      islandPickables,
+      scene,
+      onReport: (report) => {
+        window.__lawWorldIslandGlbReport = report;
       },
     });
     await upgradeIslandsDeco({

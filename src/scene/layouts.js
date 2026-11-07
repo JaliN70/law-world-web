@@ -33,11 +33,11 @@ export const LOGO_PLATFORM_R = 4;
  */
 export const ISLAND_POSITIONS = {
   fire: [0, 0, -34],
-  building: [29.445, 0, -17],
-  telecom: [29.445, 0, 17],
+  building: [29.444864, 0, -17],
+  telecom: [29.444864, 0, 17],
   accessibility: [0, 0, 34],
-  water: [-29.445, 0, 17],
-  electrical: [-29.445, 0, -17],
+  water: [-29.444864, 0, 17],
+  electrical: [-29.444864, 0, -17],
 };
 
 export function islandYawTowardCenter(id) {
