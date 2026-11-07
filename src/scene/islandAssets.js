@@ -78,6 +78,9 @@ export async function installArchipelagoGlb({ islands, islandPickables, scene, o
     gltf.scene.name = 'logo_platform_root';
     gltf.scene.position.set(0, 0, 0);
     gltf.scene.userData.nonInteractive = true;
+    gltf.scene.traverse((o) => {
+      if (o.isMesh) o.renderOrder = 1;
+    });
     scene.add(gltf.scene);
     report.ok.push('deco_logo_platform.glb');
   } catch (e) {

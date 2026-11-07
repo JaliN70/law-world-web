@@ -30,7 +30,7 @@ export function renderConfirmCard(areaId, progress) {
     </div>
     <div class="card-actions thumb-actions focus-actions">
       <button type="button" class="btn-primary" data-action="lesson" data-area="${areaId}">本站教學／任務</button>
-      <button type="button" class="btn-secondary" data-action="external" data-area="${areaId}">進入法規站 ↗</button>
+      <button type="button" class="btn-secondary btn-external" data-action="external" data-area="${areaId}">進入法規站</button>
     </div>
     <p class="card-links focus-law-link">
       <a href="${primaryLawUrl}" target="_blank" rel="noopener noreferrer" class="text-link law-link">查看原文（全國法規資料庫） ↗</a>

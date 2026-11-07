@@ -185,9 +185,28 @@ body {
   flex: 1;
   min-height: 50px;
   border-radius: 14px;
-  font: inherit;
+  font-family: var(--font);
+  font-size: inherit;
   font-weight: 700;
   cursor: pointer;
+}
+
+a.btn-primary,
+a.btn-secondary,
+a.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  text-align: center;
+  padding: 0 12px;
+  line-height: 1.25;
+}
+
+.btn-external::after {
+  content: ' ↗';
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-weight: 400;
 }
 
 .thumb-btn.solid,

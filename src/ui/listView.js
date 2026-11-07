@@ -11,7 +11,7 @@ export function renderListCards(container) {
         <p class="list-law">${a.lawName}</p>
         <div class="list-card-actions">
           <button type="button" class="btn-primary" data-list-lesson="${id}">本站教學</button>
-          <a class="btn-secondary" href="${a.siteUrl}" target="_blank" rel="noopener noreferrer">進入法規站 ↗</a>
+          <a class="btn-secondary btn-external" href="${a.siteUrl}" target="_blank" rel="noopener noreferrer">進入法規站</a>
         </div>
         <a class="text-link" href="${lawLink}" target="_blank" rel="noopener noreferrer">查看原文</a>
       </article>
