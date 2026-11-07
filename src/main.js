@@ -76,8 +76,6 @@ let waterMesh = world.water;
 const labelHeights = Object.fromEntries(modelStats.map((r) => [r.name, r.max[1]]));
 
 rig.setPanBounds(worldBounds.islandRadius);
-fitCamera();
-updateQuestThumb();
 
 const tour = new TourDirector({
   rig,
@@ -96,6 +94,9 @@ const tour = new TourDirector({
     }
   },
 });
+
+fitCamera();
+updateQuestThumb();
 
 let panLocked = true;
 let focusedId = null;

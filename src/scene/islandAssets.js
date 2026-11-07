@@ -29,7 +29,7 @@ export async function installArchipelagoGlb({ islands, islandPickables, scene, o
   const report = { ok: [], failed: [] };
 
   try {
-    const islandTpl = await loadGlbScene(decoUrl('deco_island_12m.glb'));
+    const islandTpl = await loadGlbScene(decoUrl('deco_island_12m'));
     report.ok.push('deco_island_12m.glb');
 
     islandPickables.length = 0;
@@ -58,7 +58,7 @@ export async function installArchipelagoGlb({ islands, islandPickables, scene, o
 
   try {
     const { gltfLoader } = getGlbLoaders();
-    const gltf = await gltfLoader.loadAsync(decoUrl('deco_logo_platform.glb'));
+    const gltf = await gltfLoader.loadAsync(decoUrl('deco_logo_platform'));
     const mat = extractSharedMaterial(gltf.scene);
     if (mat) setSharedPaletteMaterial(mat);
     gltf.scene.traverse((o) => {
