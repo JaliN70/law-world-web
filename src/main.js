@@ -18,6 +18,7 @@ import { renderListCards } from './ui/listView.js';
 import { renderQuestPanel } from './ui/questPanel.js';
 import { countCompletedQuests } from './data/parkQuests.js';
 import { upgradeBuildingsToGlb, collectPulseMeshes } from './scene/glbBuildings.js';
+import { upgradeDecoToGlb } from './scene/glbDeco.js';
 import modelStats from './data/model-stats.json';
 
 const canvas = document.getElementById('world-canvas');
@@ -117,10 +118,18 @@ async function loadBuildingModels() {
         window.__lawWorldGlbReport = report;
       },
     });
+    await upgradeDecoToGlb({
+      island: world.island,
+      layout: world.layout,
+      isMobile,
+      onReport: (report) => {
+        window.__lawWorldDecoReport = report;
+      },
+    });
     pulseMeshes = collectPulseMeshes(buildings);
     applyUnlocks(scene, progress.unlocks);
   } catch (e) {
-    console.warn('[law-world] GLB load failed, using MVP color blocks', e);
+    console.warn('[law-world] GLB load failed, using fallbacks', e);
   }
 }
 
