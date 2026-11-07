@@ -6,6 +6,11 @@ import {
   getSharedPaletteMaterial,
 } from './glbLoader.js';
 import { BUILDING_NAMES, BUILDING_HALF } from './layouts.js';
+
+const STONE_START = 7.15;
+const DESKTOP_ROAD_R = 25.5;
+const MOBILE_ROAD_BOUNDS = { minX: -22, maxX: 22, minZ: -18, maxZ: 18 };
+const HEX_ANGLES = [90, 30, -30, -90, -150, 150];
 import { PALETTE } from '../palette.js';
 import {
   addCentralPlaza as addCentralPlazaProcedural,
@@ -41,81 +46,192 @@ async function loadDecoTemplate(name) {
   }
 }
 
-function placeRadialRun(parent, template, layoutEntry, opts) {
-  const [bx, , bz] = layoutEntry;
-  const dist = Math.hypot(bx, bz);
-  if (dist < 0.01) return;
-  const dx = bx / dist;
-  const dz = bz / dist;
-  const rotY = Math.atan2(bx, bz);
-  const sEnd = dist - 4.2;
-  let s = opts.start;
+function addModularHolder(run, tmpl, ox, oz, rotY, segLen, nominalLen) {
+  const holder = new THREE.Group();
+  holder.position.set(ox, 0, oz);
+  holder.rotation.y = rotY;
+  const piece = cloneDecoScene(tmpl);
+  if (nominalLen > 0 && segLen < nominalLen - 0.001) holder.scale.z = segLen / nominalLen;
+  holder.add(piece);
+  run.add(holder);
+}
+
+/** 沿固定方向鋪 4 m + 1 m 模組；尾段不足 1 m 時只縮最後 1 m 的 Z。 */
+function placeModularRun(parent, { ox0, oz0, dirX, dirZ, rotY, startS, endS, t4, t1, name }) {
+  if (!t4 || !t1 || endS <= startS + 0.02) return;
   const run = new THREE.Group();
-  run.name = `deco_run_${opts.kind}_${bx}_${bz}`;
-
-  while (s < sEnd - 0.05) {
-    const remain = sEnd - s;
-    let segLen = 0;
-    let use4 = false;
-    if (remain >= 4) {
-      segLen = 4;
-      use4 = true;
-    } else if (remain >= 1) {
-      segLen = 1;
-    } else break;
-
-    const tmpl = use4 ? opts.t4 : opts.t1;
-    if (!tmpl) break;
-    const piece = cloneDecoScene(tmpl);
+  run.name = name;
+  let s = startS;
+  while (s < endS - 0.02) {
+    const remain = endS - s;
+    const use4 = remain >= 4;
+    const nominal = use4 ? 4 : 1;
+    let segLen = use4 ? 4 : remain;
+    if (!use4 && remain <= 0.02) break;
+    if (!use4 && remain < 1) segLen = remain;
+    const tmpl = use4 ? t4 : t1;
     const mid = s + segLen / 2;
-    piece.position.set(0, 0, 0);
-    const holder = new THREE.Group();
-    holder.position.set(dx * mid, 0, dz * mid);
-    holder.rotation.y = rotY;
-    if (!use4 && segLen < 0.999) {
-      holder.scale.z = remain;
-    } else if (!use4 && remain < 1 && remain > 0.05) {
-      holder.scale.z = remain;
-    }
-    holder.add(piece);
-    run.add(holder);
-    s += use4 ? 4 : Math.min(1, remain);
+    addModularHolder(
+      run,
+      tmpl,
+      ox0 + dirX * mid,
+      oz0 + dirZ * mid,
+      rotY,
+      segLen,
+      nominal
+    );
+    s += segLen;
   }
   parent.add(run);
 }
 
-function placeOffsetRoad(parent, template4, template1, layoutEntry, plazaStart, offset = 2.9) {
+function placeRadialStone(parent, layoutEntry, t4, t1, label) {
   const [bx, , bz] = layoutEntry;
   const dist = Math.hypot(bx, bz);
   if (dist < 0.01) return;
-  const dx = bx / dist;
-  const dz = bz / dist;
-  const px = -dz * offset;
-  const pz = dx * offset;
+  const dirX = bx / dist;
+  const dirZ = bz / dist;
   const rotY = Math.atan2(bx, bz);
-  const sEnd = dist + 1.5;
-  let s = plazaStart + 2;
-  const run = new THREE.Group();
-  run.name = `deco_road_run_${bx}_${bz}`;
+  const endS = dist - BUILDING_HALF;
+  placeModularRun(parent, {
+    ox0: 0,
+    oz0: 0,
+    dirX,
+    dirZ,
+    rotY,
+    startS: STONE_START,
+    endS,
+    t4,
+    t1,
+    name: `deco_run_stone_${label}`,
+  });
+}
 
-  while (s < sEnd - 0.05) {
-    const remain = sEnd - s;
-    const use4 = remain >= 4;
-    const segLen = use4 ? 4 : remain >= 1 ? 1 : 0;
-    if (!segLen) break;
-    const tmpl = use4 ? template4 : template1;
-    if (!tmpl) break;
-    const piece = cloneDecoScene(tmpl);
-    const mid = s + segLen / 2;
-    const holder = new THREE.Group();
-    holder.position.set(dx * mid + px, 0, dz * mid + pz);
-    holder.rotation.y = rotY;
-    if (!use4 && remain < 1) holder.scale.z = remain;
-    holder.add(piece);
-    run.add(holder);
-    s += use4 ? 4 : Math.min(1, remain);
+function placeLinearStone(parent, x0, z0, x1, z1, t4, t1, name) {
+  const dx = x1 - x0;
+  const dz = z1 - z0;
+  const len = Math.hypot(dx, dz);
+  if (len < 0.05) return;
+  const dirX = dx / len;
+  const dirZ = dz / len;
+  const rotY = Math.atan2(dx, dz);
+  placeModularRun(parent, {
+    ox0: x0,
+    oz0: z0,
+    dirX,
+    dirZ,
+    rotY,
+    startS: 0,
+    endS: len,
+    t4,
+    t1,
+    name,
+  });
+}
+
+function hexRoadVertices(R) {
+  return HEX_ANGLES.map((deg) => {
+    const rad = ((deg - 30) * Math.PI) / 180;
+    return [Math.cos(rad) * R, -Math.sin(rad) * R];
+  });
+}
+
+/** 自原點射線與線段交點參數 t（O + t·d = A + u·(B−A)）。 */
+function raySegmentHitT(dirX, dirZ, ax, az, bx, bz) {
+  const ex = bx - ax;
+  const ez = bz - az;
+  const denom = dirX * ez - dirZ * ex;
+  if (Math.abs(denom) < 1e-9) return null;
+  const t = (ax * ez - az * ex) / denom;
+  const u = (ax * dirZ - az * dirX) / denom;
+  if (t <= 1e-5 || u < -1e-5 || u > 1 + 1e-5) return null;
+  return t;
+}
+
+function desktopRayRoadHit(dirX, dirZ) {
+  const verts = hexRoadVertices(DESKTOP_ROAD_R);
+  let best = Infinity;
+  for (let i = 0; i < verts.length; i++) {
+    const [x0, z0] = verts[i];
+    const [x1, z1] = verts[(i + 1) % verts.length];
+    const t = raySegmentHitT(dirX, dirZ, x0, z0, x1, z1);
+    if (t != null && t < best) best = t;
   }
-  parent.add(run);
+  return Number.isFinite(best) ? best : null;
+}
+
+function radialRoadHit(bx, bz, isMobile) {
+  const dist = Math.hypot(bx, bz);
+  if (dist < 0.01) return null;
+  const dirX = bx / dist;
+  const dirZ = bz / dist;
+  const rotY = Math.atan2(bx, bz);
+  if (!isMobile) {
+    const s = desktopRayRoadHit(dirX, dirZ);
+    if (s == null) return null;
+    return { s, x: dirX * s, z: dirZ * s, dirX, dirZ, rotY };
+  }
+  const hits = [];
+  if (dirX > 1e-6) hits.push((MOBILE_ROAD_BOUNDS.maxX - 0) / dirX);
+  if (dirX < -1e-6) hits.push((MOBILE_ROAD_BOUNDS.minX - 0) / dirX);
+  if (dirZ > 1e-6) hits.push((MOBILE_ROAD_BOUNDS.maxZ - 0) / dirZ);
+  if (dirZ < -1e-6) hits.push((MOBILE_ROAD_BOUNDS.minZ - 0) / dirZ);
+  const s = Math.min(...hits.filter((t) => t > 0));
+  return { s, x: dirX * s, z: dirZ * s, dirX, dirZ, rotY };
+}
+
+function outerRoadWaypoints(isMobile) {
+  if (isMobile) {
+    const { minX, maxX, minZ, maxZ } = MOBILE_ROAD_BOUNDS;
+    return [
+      [minX, maxZ],
+      [maxX, maxZ],
+      [maxX, minZ],
+      [minX, minZ],
+    ];
+  }
+  return hexRoadVertices(DESKTOP_ROAD_R);
+}
+
+function placeOuterRoadNetwork(parent, t4, t1, isMobile) {
+  const pts = outerRoadWaypoints(isMobile);
+  for (let i = 0; i < pts.length; i++) {
+    const [x0, z0] = pts[i];
+    const [x1, z1] = pts[(i + 1) % pts.length];
+    placeLinearStone(parent, x0, z0, x1, z1, t4, t1, `deco_road_edge_${i}`);
+  }
+}
+
+function placeStoneSpurToRoad(parent, layoutEntry, hit, t4, t1, stoneToRoad, label) {
+  const [bx, , bz] = layoutEntry;
+  const dist = Math.hypot(bx, bz);
+  if (!hit || dist < 0.01) return;
+  const faceS = dist + BUILDING_HALF;
+  const junctionS = hit.s - 1.0;
+  if (junctionS <= faceS + 0.05) return;
+
+  placeModularRun(parent, {
+    ox0: 0,
+    oz0: 0,
+    dirX: hit.dirX,
+    dirZ: hit.dirZ,
+    rotY: hit.rotY,
+    startS: faceS,
+    endS: junctionS,
+    t4,
+    t1,
+    name: `deco_run_stone_spur_${label}`,
+  });
+
+  if (stoneToRoad) {
+    const piece = cloneDecoScene(stoneToRoad);
+    const holder = new THREE.Group();
+    holder.position.set(hit.dirX * (junctionS + 0.5), 0, hit.dirZ * (junctionS + 0.5));
+    holder.rotation.y = hit.rotY;
+    holder.name = `deco_junction_stone_road_${label}`;
+    holder.add(piece);
+    parent.add(holder);
+  }
 }
 
 function treeFarFromBuildings(x, z, layout, minClear = 6.2) {
@@ -176,8 +292,6 @@ export async function upgradeDecoToGlb({ island, layout, isMobile, onReport }) {
   const shared = getSharedPaletteMaterial();
   if (shared) applySharedMaterial(decoRoot, shared);
 
-  const stoneStart = 7.15;
-
   if (templates.cliff) {
     const cliff = cloneDecoScene(templates.cliff);
     cliff.name = 'deco_island_cliff';
@@ -219,27 +333,29 @@ export async function upgradeDecoToGlb({ island, layout, isMobile, onReport }) {
 
   const pathsGroup = new THREE.Group();
   pathsGroup.name = 'deco_paths';
-  if (templates.stone4 && templates.stone1) {
+  const hasStone = templates.stone4 && templates.stone1;
+  if (hasStone) {
     BUILDING_NAMES.forEach((id) => {
       const pos = layout[id];
       if (!pos) return;
-      placeRadialRun(pathsGroup, null, pos, {
-        kind: 'stone',
-        start: stoneStart,
-        t4: templates.stone4,
-        t1: templates.stone1,
-      });
+      placeRadialStone(pathsGroup, pos, templates.stone4, templates.stone1, id);
+      const hit = radialRoadHit(pos[0], pos[2], isMobile);
+      placeStoneSpurToRoad(
+        pathsGroup,
+        pos,
+        hit,
+        templates.stone4,
+        templates.stone1,
+        templates.stoneToRoad,
+        id
+      );
     });
   } else {
     addStoneGardenProcedural(island, layout);
   }
 
   if (templates.road4 && templates.road1) {
-    BUILDING_NAMES.forEach((id) => {
-      const pos = layout[id];
-      if (!pos) return;
-      placeOffsetRoad(pathsGroup, templates.road4, templates.road1, pos, stoneStart);
-    });
+    placeOuterRoadNetwork(pathsGroup, templates.road4, templates.road1, isMobile);
   }
 
   decoRoot.add(pathsGroup);
