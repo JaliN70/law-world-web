@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createWorldScene, setBuildingSaturation, applyUnlocks } from './scene/world.js';
+import { updateShorelineGlowFade, resetShorelineGlow } from './scene/shorelineGlow.js';
 import { createIsoCamera, resizeCamera, CameraRig } from './scene/camera.js';
 import { attachPanZoom } from './scene/controls.js';
 import { TourDirector } from './scene/tour.js';
@@ -11,12 +12,14 @@ import {
   loadProgress,
   saveProgress,
   markVisitDay,
-  countAreasWithQuest,
+  countIntroQuestsComplete,
+  isLawPassComplete,
 } from './state/storage.js';
 import { renderConfirmCard, bindCardActions } from './ui/card.js';
 import { openLessonSheet } from './ui/lesson.js';
 import { renderListCards } from './ui/listView.js';
 import { renderQuestPanel } from './ui/questPanel.js';
+import { showCertificatePanel } from './ui/certificate.js';
 import { countCompletedQuests } from './data/parkQuests.js';
 import { upgradeBuildingsToGlb, collectPulseMeshes } from './scene/glbBuildings.js';
 import { upgradeIslandsDeco } from './scene/islandGlbDeco.js';
@@ -34,11 +37,17 @@ const lessonSheet = document.getElementById('lesson-sheet');
 const tutorialOverlay = document.getElementById('tutorial-overlay');
 const tutorialSpotlight = document.getElementById('tutorial-spotlight');
 const questPanel = document.getElementById('quest-panel');
+const certificatePanel = document.getElementById('certificate-panel');
 const minimapEl = document.getElementById('archipelago-minimap');
 const btnBackArchipelago = document.getElementById('btn-back-archipelago');
 
 const progress = loadProgress();
 markVisitDay(progress);
+if (isLawPassComplete(progress)) {
+  progress.unlocks.deco_logo_inlay = true;
+  progress.unlocks.deco_shore_glow = true;
+  saveProgress(progress);
+}
 
 const mqMobile = window.matchMedia('(max-width: 768px), (max-aspect-ratio: 1/1)');
 let isMobile = mqMobile.matches;
@@ -141,7 +150,7 @@ async function loadBuildingModels() {
       },
     });
     pulseMeshes = collectPulseMeshes(buildings);
-    applyUnlocks(scene, progress.unlocks);
+    applyUnlocks(scene, progress.unlocks, { reducedMotion });
   } catch (e) {
     console.warn('[law-world] GLB load failed, using fallbacks', e);
   }
@@ -158,6 +167,7 @@ function fitCamera() {
 }
 
 function rebuildLayout() {
+  resetShorelineGlow();
   world = createWorldScene({ isMobile, reducedMotion });
   scene = world.scene;
   buildings = world.buildings;
@@ -169,7 +179,7 @@ function rebuildLayout() {
   tour.buildings = buildings;
   rig.setPanBounds(worldBounds.islandRadius);
   fitCamera();
-  applyUnlocks(scene, progress.unlocks);
+  applyUnlocks(scene, progress.unlocks, { reducedMotion });
   if (focusedId) setBuildingSaturation(buildings, focusedId);
   loadBuildingModels();
 }
@@ -280,8 +290,7 @@ function openCard(areaId) {
     external: (id) => window.open(AREAS[id].siteUrl, '_blank', 'noopener'),
     lesson: (id) => {
       openLessonSheet(lessonSheet, id, progress, () => {
-        applyUnlocks(scene, progress.unlocks);
-        maybeCrossUnlocks();
+        maybeCrossUnlocks({ fromQuest: true });
         updateQuestThumb();
       });
     },
@@ -377,12 +386,21 @@ function showList(show) {
 renderListCards(listCards);
 listCards.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-list-lesson]');
-  if (btn) openLessonSheet(lessonSheet, btn.dataset.listLesson, progress, () => applyUnlocks(scene, progress.unlocks));
+  if (btn)
+    openLessonSheet(lessonSheet, btn.dataset.listLesson, progress, () => maybeCrossUnlocks({ fromQuest: true }));
 });
+
+function openCertificate({ keepQuestOpen = false } = {}) {
+  showCertificatePanel(certificatePanel, { reducedMotion });
+  if (!keepQuestOpen) questPanel.classList.add('hidden');
+}
 
 function openQuests() {
   renderQuestPanel(questPanel, progress);
   questPanel.classList.remove('hidden');
+  questPanel.querySelector('#btn-open-cert')?.addEventListener('click', () => {
+    openCertificate({ keepQuestOpen: false });
+  });
   questPanel.querySelector('#btn-quest-close')?.addEventListener('click', () => {
     questPanel.classList.add('hidden');
   });
@@ -395,19 +413,29 @@ function openQuests() {
   );
 }
 
-function maybeCrossUnlocks() {
-  const n = countAreasWithQuest(progress);
-  if (n >= 3) progress.unlocks.lamp_dock = true;
+function maybeCrossUnlocks({ fromQuest = false } = {}) {
+  const introDone = countIntroQuestsComplete(progress);
+  if (introDone >= 3) progress.unlocks.lamp_dock = true;
   if (progress.questsDone.F2 && progress.questsDone.B3) {
     progress.unlocks.unlock_flag_fire = true;
     progress.unlocks.unlock_flag_building = true;
   }
   if (progress.visitDays.length >= 4) progress.unlocks.night_mode = true;
-  if (n >= 6) progress.unlocks.deco_logo_inlay = true;
+  const lawPass = isLawPassComplete(progress);
+  if (lawPass) {
+    progress.unlocks.deco_logo_inlay = true;
+    progress.unlocks.deco_shore_glow = true;
+  }
   saveProgress(progress);
-  applyUnlocks(scene, progress.unlocks);
+  applyUnlocks(scene, progress.unlocks, { reducedMotion });
   updateQuestThumb();
   updateMinimap();
+
+  if (fromQuest && lawPass && !progress.lawPassCertAutoShown) {
+    progress.lawPassCertAutoShown = true;
+    saveProgress(progress);
+    openCertificate();
+  }
 }
 
 /* Tutorial */
@@ -540,6 +568,7 @@ function animate() {
   if (activeTransition) activeTransition = activeTransition(dt) || null;
   rig.update();
   updateWaterSurface(waterMesh, clock.elapsedTime);
+  updateShorelineGlowFade(dt);
 
   if (!reducedMotion) {
     const t = performance.now() * 0.002;
@@ -564,7 +593,7 @@ if (progress.introSeen || progress.visited) {
   runTutorial();
 }
 
-applyUnlocks(scene, progress.unlocks);
+applyUnlocks(scene, progress.unlocks, { reducedMotion });
 loadBuildingModels();
 updateMinimap();
 clearTimeout(loadTimer);

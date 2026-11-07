@@ -10,6 +10,7 @@ import {
 } from './layouts.js';
 import { createWaterSurface } from './waterSurface.js';
 import { applyLogoInlayGlow } from './logoPlatform.js';
+import { syncShorelineGlow, refreshShorelineGlowIfNeeded } from './shorelineGlow.js';
 
 export function createWorldScene({ isMobile, reducedMotion }) {
   const scene = new THREE.Scene();
@@ -115,7 +116,7 @@ function applyDecoHighlight(mesh, { emissive, intensity }) {
   mesh.material.emissiveIntensity = intensity;
 }
 
-export function applyUnlocks(scene, unlocks) {
+export function applyUnlocks(scene, unlocks, { reducedMotion = false } = {}) {
   scene.traverse((o) => {
     Object.entries(UNLOCK_DECO_HIGHLIGHT).forEach(([key, spec]) => {
       if (unlocks[key] && spec.names.includes(o.name)) {
@@ -131,6 +132,13 @@ export function applyUnlocks(scene, unlocks) {
 
     if (o.name === 'logo_inlay' && unlocks.deco_logo_inlay) applyLogoInlayGlow(o, true);
   });
+
+  if (unlocks.deco_shore_glow) {
+    syncShorelineGlow(scene, true, { reducedMotion });
+    refreshShorelineGlowIfNeeded(scene, true, { reducedMotion });
+  } else {
+    syncShorelineGlow(scene, false);
+  }
 
   if (unlocks.night_mode) {
     scene.traverse((o) => {
