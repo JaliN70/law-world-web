@@ -22,9 +22,11 @@ export function toScreenPlane(x, z) {
 
 /** 建築一律正面（入口 +Z）朝鏡頭：local +Z → 世界 (1,0,1)/√2 */
 export const BUILDING_YAW = Math.PI / 4;
-export const PLOT_HALF = 4;
-export const PLAZA_R = 6.6;
-export const ROAD_W = 2.8;
+/** 建築放大倍率：藍圖效果圖中建築幾乎佔滿島面 */
+export const BUILDING_SCALE = 1.2;
+export const PLOT_HALF = 4 * BUILDING_SCALE;
+export const PLAZA_R = 7.2;
+export const ROAD_W = 3.4;
 
 /**
  * 環狀布局：六棟等距環繞中央廣場（畫面上呈六角）。
@@ -49,16 +51,16 @@ function ring({ id, rx, ru, island, plazaScale = 1, flags, sign }) {
 
 export const PRESETS = {
   // 桌機橫式
-  ring: ring({ id: 'ring', rx: 17, ru: 19, island: { hr: 27, hu: 31, chamfer: 10 }, flags: [[8, 0], [-8, 0]], sign: [4.6, -7.6] }),
+  ring: ring({ id: 'ring', rx: 16.5, ru: 19, island: { hr: 24, hu: 28.5, chamfer: 9 }, flags: [[7.4, 0], [-7.4, 0]], sign: [4.4, -8.6] }),
   // 手機直式：同樣是環狀，只是較高較窄
   ringTall: ring({
     id: 'ringTall',
-    rx: 11,
-    ru: 25,
-    island: { hr: 18.5, hu: 34, chamfer: 6 },
+    rx: 11.5,
+    ru: 24,
+    island: { hr: 18.5, hu: 32, chamfer: 6 },
     plazaScale: 0.8,
-    flags: [[6.4, 0], [-6.4, 0]],
-    sign: [3.6, -8.2],
+    flags: [[6, 0], [-6, 0]],
+    sign: [3.4, -7.6],
   }),
 };
 

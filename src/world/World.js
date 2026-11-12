@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { AREA_ORDER } from '../data/areas.js';
-import { PRESETS, toWorld, BUILDING_YAW, PLOT_HALF, PLAZA_R, ROAD_W } from './layout.js';
+import { PRESETS, toWorld, BUILDING_YAW, BUILDING_SCALE, PLOT_HALF, PLAZA_R, ROAD_W } from './layout.js';
 import { buildGround, buildRoads, scatterTrees, lampSpots, blobShadowTexture } from './terrain.js';
 import { IsoCamera } from './camera.js';
 import { Effects } from './effects.js';
@@ -86,7 +86,7 @@ export class World {
     // 中央廣場
     const plaza = templates.plaza.clone(true);
     plaza.name = 'plaza';
-    plaza.scale.setScalar(P.plazaScale || 1);
+    plaza.scale.setScalar((P.plazaScale || 1) * (PLAZA_R / 6.6));
     this.root.add(plaza);
     plaza.traverse((o) => {
       if (!o.isMesh) return;
@@ -105,6 +105,7 @@ export class World {
       holder.rotation.y = BUILDING_YAW;
       const b = templates[id].clone(true);
       b.name = id;
+      b.scale.setScalar(BUILDING_SCALE);
       const sat = { value: 1 };
       const bodyMat = palette.saturatable(`${id}_body`);
       bodyMat.userData.uSat = sat;
@@ -432,7 +433,7 @@ export class World {
     const v = new THREE.Vector3();
     for (const b of Object.values(this.buildings)) {
       // 標籤放在主量體屋頂上方；細高的塔不算，避免標籤疊到後排建築
-      v.copy(b.center).setY((LABEL_ROOF[b.id] ?? b.top) + 1.4 + (b.lift || 0));
+      v.copy(b.center).setY((LABEL_ROOF[b.id] != null ? LABEL_ROOF[b.id] * BUILDING_SCALE : b.top) + 1.4 + (b.lift || 0));
       out[b.id] = this.iso.project(v, this.size.w, this.size.h);
     }
     return out;
