@@ -273,3 +273,7 @@ html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after 
 .view-ctl button { width: 44px; height: 44px; border-radius: 12px; border: 1.5px solid var(--brand, #1F4E79); background: rgba(255,255,255,.92); color: var(--brand, #1F4E79); font-size: 20px; line-height: 1; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
 .view-ctl button:active { background: #e6eef7; }
 html.night .view-ctl button { background: rgba(20,32,56,.9); color: #cfe0f5; border-color: #5b7fa8; }
+@media (max-width: 600px) {
+  .view-ctl { top: 72px; right: 10px; transform: none; flex-direction: row; gap: 6px; }
+  .view-ctl button { width: 44px; height: 44px; font-size: 18px; }
+}
