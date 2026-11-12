@@ -433,7 +433,12 @@ export class World {
     const v = new THREE.Vector3();
     for (const b of Object.values(this.buildings)) {
       // 標籤放在主量體屋頂上方；細高的塔不算，避免標籤疊到後排建築
-      v.copy(b.center).setY((LABEL_ROOF[b.id] != null ? LABEL_ROOF[b.id] * BUILDING_SCALE : b.top) + 1.4 + (b.lift || 0));
+      // 往島外側挪一點，標籤才不會蓋在中央廣場上
+      v.copy(b.center);
+      const d = Math.hypot(v.x, v.z) || 1;
+      v.x += (v.x / d) * PLOT_HALF * 0.7;
+      v.z += (v.z / d) * PLOT_HALF * 0.7;
+      v.setY((LABEL_ROOF[b.id] != null ? LABEL_ROOF[b.id] * BUILDING_SCALE : b.top) + 1.4 + (b.lift || 0));
       out[b.id] = this.iso.project(v, this.size.w, this.size.h);
     }
     return out;
