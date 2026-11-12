@@ -717,8 +717,9 @@ a.btn-outline {
   border-radius: 50%;
   border: 2px solid var(--brand);
   background: #fff;
-  color: transparent;
-  font-size: 0;
+  color: var(--brand);
+  font-size: 0.95rem;
+  font-weight: 700;
   cursor: pointer;
   padding: 0;
 }
@@ -727,10 +728,40 @@ a.btn-outline {
   background: color-mix(in srgb, var(--brand) 25%, white);
 }
 
+.minimap-node {
+  position: relative;
+}
 .minimap-node.done::after {
   content: '✓';
-  color: var(--brand);
-  font-size: 0.9rem;
+  position: absolute;
+  right: -4px;
+  top: -4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font-size: 0.65rem;
+  line-height: 16px;
+}
+
+/* 手機直式 2×3：概覽本身就是一張地圖，小地圖只在島嶼視圖出現（且縮小），不遮第一排島 */
+body.layout-grid .archipelago-minimap {
+  display: none;
+}
+body.layout-grid.view-island .archipelago-minimap {
+  display: block;
+  padding: 6px 8px;
+  max-width: none;
+  right: 12px;
+}
+body.layout-grid.view-island .minimap-title {
+  display: none;
+}
+body.layout-grid.view-island .minimap-hex {
+  grid-template-columns: repeat(6, 44px);
+  justify-content: space-between;
+  gap: 4px;
 }
 
 .minimap-node.active {

@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { createWorldScene, setBuildingSaturation, applyUnlocks } from './scene/world.js';
-import { updateShorelineGlowFade, resetShorelineGlow } from './scene/shorelineGlow.js';
-import { createIsoCamera, resizeCamera, CameraRig } from './scene/camera.js';
+import { createWorldScene, setBuildingSaturation, applyUnlocks, disposeWorld } from './scene/world.js';
+import { bindGlowMaterials, setLawPassGlow, updateLawPassGlow } from './scene/shorelineGlow.js';
+import { createIsoCamera, fitOverview, CameraRig } from './scene/camera.js';
 import { attachPanZoom } from './scene/controls.js';
 import { TourDirector } from './scene/tour.js';
 import { pickBuilding, pickIsland } from './interaction/raycast.js';
-import { LABELS_ZH, BUILDING_NAMES, computeIslandBounds } from './scene/layouts.js';
-import { updateWaterSurface } from './scene/waterSurface.js';
+import { LABELS_ZH, BUILDING_NAMES, getLayoutPreset } from './scene/layouts.js';
+import { updateWaterSurface, setWaterMotion } from './scene/waterSurface.js';
 import { AREAS } from './data/areas.js';
 import {
   loadProgress,
@@ -21,9 +21,7 @@ import { renderListCards } from './ui/listView.js';
 import { renderQuestPanel } from './ui/questPanel.js';
 import { showCertificatePanel } from './ui/certificate.js';
 import { countCompletedQuests } from './data/parkQuests.js';
-import { upgradeBuildingsToGlb, collectPulseMeshes } from './scene/glbBuildings.js';
-import { upgradeIslandsDeco } from './scene/islandGlbDeco.js';
-import { installArchipelagoGlb } from './scene/islandAssets.js';
+import { installPark } from './scene/parkAssets.js';
 import modelStats from './data/model-stats.json';
 
 const canvas = document.getElementById('world-canvas');
@@ -54,8 +52,10 @@ let isMobile = mqMobile.matches;
 let reducedMotion =
   progress.reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
+/** DPR 上限 1.5；低階機（FPS < 30 持續 2 s）再降到 1 */
+const DPR_CAP = 1.5;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, DPR_CAP));
 
 let width = canvas.clientWidth;
 let height = canvas.clientHeight;
@@ -68,21 +68,21 @@ let world = createWorldScene({ isMobile, reducedMotion });
 let scene = world.scene;
 let buildings = world.buildings;
 let clickable = world.clickable;
-let pulseMeshes = world.pulseMeshes;
-let worldBounds = world.worldBounds;
+let pulseMeshes = [];
 let islandPickables = world.islandPickables;
 let waterMesh = world.water;
 
 const labelHeights = Object.fromEntries(modelStats.map((r) => [r.name, r.max[1]]));
 
-rig.setPanBounds(worldBounds.islandRadius);
+if (new URLSearchParams(location.search).has('debug')) {
+  window.__lw = { renderer, camera, scene: () => scene, rig };
+}
 
 const tour = new TourDirector({
   rig,
   camera,
   buildings,
   reducedMotion,
-  isMobile,
   onBeat: (type, i) => {
     if (type === 'label') showLabelsUpTo(i);
     if (type === 'labels-all') showLabelsUpTo(6);
@@ -128,86 +128,99 @@ function unlockPan() {
   BUILDING_NAMES.forEach((id) => labelEls[id].classList.remove('hidden'));
 }
 
-async function loadBuildingModels() {
+function collectPulseMeshes() {
+  return Object.values(buildings).flatMap((p) => p.userData.pulseRings || []);
+}
+
+function syncLawPassGlow() {
+  setLawPassGlow(Boolean(progress.unlocks.deco_logo_inlay), { reducedMotion });
+}
+
+/** 單一 park.glb：建築、六島地形、中央平台一次到位 */
+async function loadParkModels() {
+  const target = world;
   try {
-    await upgradeBuildingsToGlb({
-      buildings,
-      onReport: (report) => {
-        window.__lawWorldGlbReport = report;
-      },
-    });
-    await installArchipelagoGlb({
-      islands: world.islands,
-      islandPickables,
-      scene,
-      onReport: (report) => {
-        window.__lawWorldIslandGlbReport = report;
-      },
-    });
-    await upgradeIslandsDeco({
-      islands: world.islands,
-      onReport: (report) => {
-        window.__lawWorldDecoReport = report;
-      },
-    });
-    pulseMeshes = collectPulseMeshes(buildings);
-    applyUnlocks(scene, progress.unlocks, { reducedMotion });
+    const report = await installPark(target);
+    if (target !== world) return; // 載入期間版面已切換，交給新的場景處理
+    window.__lawWorldParkReport = report;
+    pulseMeshes = collectPulseMeshes();
+    bindGlowMaterials(world.materials);
+    applyUnlocks(scene, progress.unlocks);
+    syncLawPassGlow();
+    if (focusedId) setBuildingSaturation(buildings, focusedId);
   } catch (e) {
-    console.warn('[law-world] GLB load failed, using fallbacks', e);
+    console.warn('[law-world] park.glb load failed, using color-block fallback', e);
   }
 }
 
 function fitCamera() {
-  const bounds =
-    tour.view === 'island' && tour.activeIsland
-      ? computeIslandBounds(tour.activeIsland, { pad: isMobile ? 4.5 : 3.8 })
-      : worldBounds;
-  resizeCamera(camera, width, height, bounds, isMobile);
-  tour.viewportW = width;
-  tour.viewportH = height;
+  const thumb = document.querySelector('.thumb-zone');
+  fitOverview(camera, width, height, {
+    margin: isMobile ? 1.04 : 1.08,
+    // 手機直式：底部拇指區疊在畫布上時，把群島置中在可見區
+    reserveBottom: thumb && thumb.getBoundingClientRect().top < canvas.getBoundingClientRect().bottom - 1
+      ? canvas.getBoundingClientRect().bottom - thumb.getBoundingClientRect().top
+      : 0,
+  });
+  rig.setPanBounds(getLayoutPreset() === 'grid' ? 55 : 32);
+  if (tour.view === 'island' && tour.activeIsland) {
+    rig.setZoom(tour.islandZoom(tour.activeIsland));
+  }
 }
 
 function rebuildLayout() {
-  resetShorelineGlow();
+  closeCard();
+  disposeWorld(world);
   world = createWorldScene({ isMobile, reducedMotion });
   scene = world.scene;
   buildings = world.buildings;
   clickable = world.clickable;
-  pulseMeshes = world.pulseMeshes;
-  worldBounds = world.worldBounds;
+  pulseMeshes = [];
   islandPickables = world.islandPickables;
   waterMesh = world.water;
   tour.buildings = buildings;
-  rig.setPanBounds(worldBounds.islandRadius);
+  tour.view = 'overview';
+  tour.activeIsland = null;
+  rig.resetOverview();
   fitCamera();
-  applyUnlocks(scene, progress.unlocks, { reducedMotion });
-  if (focusedId) setBuildingSaturation(buildings, focusedId);
-  loadBuildingModels();
+  updateMinimap();
+  applyUnlocks(scene, progress.unlocks);
+  loadParkModels();
+  if (window.__lw) window.__lw.scene = () => scene;
 }
 
 mqMobile.addEventListener('change', () => {
   isMobile = mqMobile.matches;
+  document.body.classList.toggle('layout-grid', isMobile);
   rebuildLayout();
 });
+document.body.classList.toggle('layout-grid', isMobile);
 
+const _labelTop = new THREE.Vector3();
+const _labelScreen = {};
+const _labelCache = {};
 function updateLabels() {
+  // 標籤不得鑽到小地圖底下
+  const mm = minimapEl && minimapEl.offsetParent ? minimapEl.offsetTop + minimapEl.offsetHeight + 8 : 0;
+  const mmRight = mm ? minimapEl.offsetLeft + minimapEl.offsetWidth : 0;
   BUILDING_NAMES.forEach((id) => {
     const g = buildings[id];
     if (!g) return;
-    const top = new THREE.Vector3();
-    g.getWorldPosition(top);
-    top.y += (labelHeights[id] || 8) + 1;
-    const s = rig.worldToScreen(top, width, height);
+    g.getWorldPosition(_labelTop);
+    _labelTop.y += (labelHeights[id] || 8) + 1;
+    const s = rig.worldToScreen(_labelTop, width, height, _labelScreen);
     const el = labelEls[id];
-    if (s.behind) {
-      el.style.visibility = 'hidden';
-      return;
-    }
-    el.style.visibility = 'visible';
     const pad = 12;
-    const lx = Math.min(width - pad, Math.max(pad, s.x));
-    const ly = Math.min(height - pad, Math.max(pad + 48, s.y - 20));
-    el.style.transform = `translate(${lx}px, ${ly}px) translate(-50%, -100%)`;
+    const lx = Math.round(Math.min(width - pad, Math.max(pad, s.x)));
+    let ly = Math.round(Math.min(height - pad, Math.max(pad + 40, s.y - 6)));
+    if (mm && lx < mmRight + 60 && ly - 44 < mm) ly = mm + 44;
+    // 島嶼視圖只留目前這座的標籤，鄰島標籤不再擠在畫面邊緣
+    const off = s.behind || (tour.view === 'island' && tour.activeIsland && tour.activeIsland !== id);
+    const key = off ? 'hidden' : `${lx},${ly}`;
+    if (_labelCache[id] === key) return; // 沒動就不碰 DOM
+    _labelCache[id] = key;
+    el.style.visibility = off ? 'hidden' : 'visible';
+    if (!off) el.style.transform = `translate(${lx}px, ${ly}px) translate(-50%, -100%)`;
   });
 }
 
@@ -245,12 +258,11 @@ function onIslandSelect(id, { openBuildingAfter } = {}) {
   if (!progress.areaProgress[id]) progress.areaProgress[id] = {};
   progress.areaProgress[id].visited = true;
   saveProgress(progress);
-  const dur = reducedMotion ? 0.2 : 0.8;
-  activeTransition = tour.flyToIsland(id, dur, () => {
-    fitCamera();
-    updateMinimap();
+  tour.reducedMotion = reducedMotion;
+  activeTransition = tour.flyToIsland(id, 0.8, () => {
     if (openBuildingAfter) onBuildingSelect(openBuildingAfter);
   });
+  updateMinimap();
   pushHistoryState({ view: 'island', island: id });
 }
 
@@ -264,24 +276,21 @@ function onBuildingSelect(id) {
   if (!b) return;
   focusedId = id;
   setBuildingSaturation(buildings, id);
-  activeTransition = tour.focusBuilding(b, () => {
-    openCard(id);
-  });
+  activeTransition = tour.focusBuilding(b, () => openCard(id), { cardLift: isMobile ? 0.2 : 0.14 });
   pushHistoryState({ view: 'card', island: id });
 }
 
+/** 藍圖 S4：點建築（或其標籤、或其島）→ 鏡頭推近 → 確認卡片，一步到位 */
 function onLabelActivate(id) {
-  if (tour.view === 'overview') onIslandSelect(id);
-  else onBuildingSelect(id);
+  onBuildingSelect(id);
 }
 
 function goOverview() {
   closeCard();
   islandFocusedId = null;
-  activeTransition = tour.flyToOverview(reducedMotion ? 0.2 : 0.8, () => {
-    fitCamera();
-    updateMinimap();
-  });
+  tour.reducedMotion = reducedMotion;
+  activeTransition = tour.flyToOverview(0.8, () => updateMinimap());
+  updateMinimap();
 }
 
 function openCard(areaId) {
@@ -300,6 +309,10 @@ function openCard(areaId) {
 }
 
 function closeCard() {
+  const wasOpen = !confirmCard.classList.contains('hidden');
+  if (wasOpen && tour.view === 'island' && tour.activeIsland) {
+    activeTransition = tour.flyToIsland(tour.activeIsland, 0.35);
+  }
   confirmCard.classList.add('hidden');
   lessonSheet.classList.add('hidden');
   focusedId = null;
@@ -319,19 +332,14 @@ attachPanZoom(canvas, rig, {
   reducedMotion,
   onTap: (x, y) => {
     if (panLocked) return;
-    if (tour.view === 'island') {
-      const id = pickBuilding(camera, clickable, x, y, canvas);
-      if (id) onBuildingSelect(id);
-      else if (confirmCard.classList.contains('hidden')) goOverview();
-      else closeCard();
+    const id = pickBuilding(camera, clickable, x, y, canvas) || pickIsland(camera, islandPickables, x, y, canvas);
+    if (id && !(tour.view === 'island' && tour.activeIsland === id && focusedId === id)) {
+      onBuildingSelect(id);
       return;
     }
-    const island = pickIsland(camera, islandPickables, x, y, canvas);
-    if (island) onIslandSelect(island);
-    else {
-      const id = pickBuilding(camera, clickable, x, y, canvas);
-      if (id) onIslandSelect(id);
-    }
+    // 點空白處：卡片開著先收卡片，再點一次回概覽（S6）
+    if (!confirmCard.classList.contains('hidden')) closeCard();
+    else if (tour.view === 'island') goOverview();
   },
 });
 
@@ -349,6 +357,7 @@ const QUEST_PREFIX = {
 function updateMinimap() {
   if (!minimapEl) return;
   btnBackArchipelago?.classList.toggle('hidden', tour.view !== 'island');
+  document.body.classList.toggle('view-island', tour.view === 'island');
   minimapEl.querySelectorAll('[data-island]').forEach((btn) => {
     const id = btn.dataset.island;
     const visited = progress.areaProgress?.[id]?.visited;
@@ -364,7 +373,7 @@ function updateMinimap() {
 minimapEl?.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-island]');
   if (!btn || panLocked) return;
-  onIslandSelect(btn.dataset.island);
+  onBuildingSelect(btn.dataset.island);
 });
 
 document.getElementById('btn-toggle-view').addEventListener('click', toggleList);
@@ -428,7 +437,8 @@ function maybeCrossUnlocks({ fromQuest = false } = {}) {
     progress.unlocks.deco_shore_glow = true;
   }
   saveProgress(progress);
-  applyUnlocks(scene, progress.unlocks, { reducedMotion });
+  applyUnlocks(scene, progress.unlocks);
+  syncLawPassGlow();
   updateQuestThumb();
   updateMinimap();
 
@@ -443,12 +453,12 @@ function maybeCrossUnlocks({ fromQuest = false } = {}) {
 const TUTORIAL_STEPS = [
   {
     title: '一法規，一座島',
-    body: '六座島圍成一圈，中央是品牌平台。點一座島，鏡頭會飛越水面到該島。',
+    body: '六座島各代表一個法規領域，中央是品牌平台。點任一座島或建築，鏡頭會推近並開啟確認卡。',
     spotlight: null,
   },
   {
-    title: '再點建築開啟確認卡',
-    body: '到島上後點建築或標籤，可開啟本站教學／任務。六島從第一秒都能進，任務只解鎖裝飾。',
+    title: '確認卡：教學、任務與原文',
+    body: '卡片可開始本站教學／任務，或進入法規站、查看原文。六島從第一秒都能進，任務只解鎖裝飾。',
     spotlight: 'fire',
   },
   {
@@ -457,7 +467,7 @@ const TUTORIAL_STEPS = [
     spotlight: 'fire',
   },
   {
-    title: '任務與原⽂',
+    title: '任務與原文',
     body: '完成小題會點亮建築裝飾；想看全文按「進入法規站」或「查看原文」。',
     spotlight: null,
   },
@@ -517,6 +527,8 @@ function finishTutorial() {
 document.getElementById('btn-reduce-motion').addEventListener('click', (e) => {
   reducedMotion = !reducedMotion;
   progress.reduceMotion = reducedMotion;
+  tour.reducedMotion = reducedMotion;
+  setWaterMotion(waterMesh, !reducedMotion);
   saveProgress(progress);
   e.currentTarget.setAttribute('aria-pressed', String(reducedMotion));
 });
@@ -544,6 +556,17 @@ document.addEventListener('visibilitychange', () => {
   hidden = document.hidden;
 });
 
+/** 藍圖 §3：低階機改 0.2 s 淡入淡出、關閉脈動與水波；另把 DPR 降到 1 */
+let lowEndMode = false;
+function enterLowEndMode() {
+  lowEndMode = true;
+  reducedMotion = true;
+  tour.reducedMotion = true;
+  setWaterMotion(waterMesh, false);
+  renderer.setPixelRatio(1);
+  renderer.setSize(width, height, false);
+}
+
 const clock = new THREE.Clock();
 let frames = 0;
 let fpsT = 0;
@@ -558,18 +581,23 @@ function animate() {
     const fps = frames / fpsT;
     if (fps < 30) {
       if (!fpsLowSince) fpsLowSince = performance.now();
-      else if (performance.now() - fpsLowSince > 2000) reducedMotion = true;
+      else if (performance.now() - fpsLowSince > 2000 && !lowEndMode) enterLowEndMode();
     } else fpsLowSince = null;
     frames = 0;
     fpsT = 0;
   }
 
   tour.update(dt);
-  tour.applyLifts();
-  if (activeTransition) activeTransition = activeTransition(dt) || null;
+  if (activeTransition) {
+    // onDone 可能已接上下一段（飛到島 → 推近建築），不能被這一段的回傳值蓋掉
+    const step = activeTransition;
+    const next = step(dt);
+    if (activeTransition === step) activeTransition = next || null;
+  }
   rig.update();
+  camera.updateMatrixWorld();
   updateWaterSurface(waterMesh, clock.elapsedTime);
-  updateShorelineGlowFade(dt);
+  updateLawPassGlow(dt);
 
   if (!reducedMotion) {
     const t = performance.now() * 0.002;
@@ -594,8 +622,8 @@ if (progress.introSeen || progress.visited) {
   runTutorial();
 }
 
-applyUnlocks(scene, progress.unlocks, { reducedMotion });
-loadBuildingModels();
+applyUnlocks(scene, progress.unlocks);
+loadParkModels();
 updateMinimap();
 clearTimeout(loadTimer);
 document.getElementById('load-fallback').classList.add('hidden');

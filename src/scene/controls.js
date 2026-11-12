@@ -21,7 +21,7 @@ export function attachPanZoom(canvas, rig, { onTap, reducedMotion }) {
     if (Math.hypot(dx, dy) > 8) moved = true;
     startX = e.clientX;
     startY = e.clientY;
-    rig.pan(dx, dy);
+    rig.pan(dx, dy, canvas.clientHeight);
   };
 
   const onPointerUp = (e) => {

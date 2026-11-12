@@ -9,7 +9,8 @@ export function pickIsland(camera, islandMeshes, clientX, clientY, canvas) {
   ray.setFromCamera({ x, y }, camera);
   const hits = ray.intersectObjects(islandMeshes, false);
   for (const h of hits) {
-    const id = h.object.userData?.islandPick;
+    const fromPoint = h.object.userData?.islandFromPoint;
+    const id = fromPoint ? fromPoint(h.point) : h.object.userData?.islandPick;
     if (id) return id;
   }
   return null;
