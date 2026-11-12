@@ -9,9 +9,13 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 export async function loadPark(url, onProgress) {
   const loader = new GLTFLoader();
   loader.setMeshoptDecoder(MeshoptDecoder);
-  const gltf = await loader.loadAsync(url, (e) => {
-    if (e.lengthComputable) onProgress?.(e.loaded / e.total);
-  });
+  // 內嵌模式：頁面預先放了 base64 的 park.glb（給不能放 .glb 檔的預覽環境用）
+  const embedded = typeof window !== 'undefined' && window.__PARK_GLB_B64;
+  const gltf = embedded
+    ? await loader.parseAsync(Uint8Array.from(atob(embedded), (c) => c.charCodeAt(0)).buffer, '')
+    : await loader.loadAsync(url, (e) => {
+        if (e.lengthComputable) onProgress?.(e.loaded / e.total);
+      });
   let map = null;
   const templates = {};
   for (const s of gltf.scenes) {
