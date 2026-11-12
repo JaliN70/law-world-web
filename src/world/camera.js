@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 
 /**
- * 固定等角正交相機（藍圖 §3）：俯角 35°、方位 45°，不開自由旋轉。
- * 只有巡禮與推近時能微調方位角（±15°）；拖曳平移與縮放都有邊界。
+ * 等角正交相機：俯角 35°、預設方位 45°。
+ * 使用者可自由平移、縮放、旋轉（yaw 不設限）；平移與縮放仍有邊界，並可一鍵重設視角。
  */
 const ELEV = THREE.MathUtils.degToRad(35);
 const AZIM = THREE.MathUtils.degToRad(45);
@@ -17,8 +17,8 @@ export class IsoCamera {
     this.target = new THREE.Vector3();
     this.yaw = 0; // 度
     this.zoom = 1;
-    this.minZoom = 0.8;
-    this.maxZoom = 2.2;
+    this.minZoom = 0.55;
+    this.maxZoom = 3;
     this.frustumH = 60;
     this.aspect = 1;
     this.shiftY = 0; // UI 遮擋補償（畫面單位）
@@ -88,22 +88,36 @@ export class IsoCamera {
     this.camera.updateMatrixWorld();
   }
 
-  /** 畫面拖曳像素 → 沿地面移動 target（含邊界） */
-  panBy(dxPx, dyPx, heightPx) {
-    const unit = this.frustumH / this.zoom / heightPx;
-    const right = new THREE.Vector3(Math.SQRT1_2, 0, -Math.SQRT1_2);
-    const groundUp = new THREE.Vector3(-Math.SQRT1_2, 0, -Math.SQRT1_2);
-    this.target.addScaledVector(right, -dxPx * unit);
-    this.target.addScaledVector(groundUp, (dyPx * unit) / Math.sin(ELEV));
+  /** 目前方位下的地面軸：畫面右、畫面上（遠離相機） */
+  groundAxes() {
+    const az = AZIM + THREE.MathUtils.degToRad(this.yaw);
+    return {
+      right: new THREE.Vector3(Math.cos(az), 0, -Math.sin(az)),
+      up: new THREE.Vector3(-Math.sin(az), 0, -Math.cos(az)),
+    };
   }
 
-  /** 目前 target 超出邊界多少（畫面對齊的 r／u） */
+  /** 畫面拖曳像素 → 沿地面移動 target */
+  panBy(dxPx, dyPx, heightPx) {
+    const unit = this.frustumH / this.zoom / heightPx;
+    const { right, up } = this.groundAxes();
+    this.target.addScaledVector(right, -dxPx * unit);
+    this.target.addScaledVector(up, (dyPx * unit) / Math.sin(ELEV));
+  }
+
+  /** 旋轉方位角（度）；不設限，只正規化到 ±180 */
+  rotateBy(deg) {
+    this.yaw = ((((this.yaw + deg) % 360) + 540) % 360) - 180;
+  }
+
+  /** 目前 target 超出島體範圍多少（以世界座標、島體半徑為界） */
   overshoot() {
-    const r = (this.target.x - this.target.z) * Math.SQRT1_2;
-    const u = (-this.target.x - this.target.z) * Math.SQRT1_2;
     const lr = this.panLimit.r / this.zoom ** 0.5;
     const lu = this.panLimit.u / this.zoom ** 0.5;
-    return { r: r - THREE.MathUtils.clamp(r, -lr, lr), u: u - THREE.MathUtils.clamp(u, -lu, lu) };
+    const { right, up } = this.groundAxes();
+    const r = this.target.dot(right);
+    const u = this.target.dot(up);
+    return { r: r - THREE.MathUtils.clamp(r, -lr, lr), u: u - THREE.MathUtils.clamp(u, -lu, lu), right, up };
   }
 
   /** 邊界回彈：每幀把超出的部分拉回 */
@@ -111,10 +125,7 @@ export class IsoCamera {
     const o = this.overshoot();
     if (!o.r && !o.u) return false;
     const k = 1 - Math.exp(-dt * 12);
-    const dr = -o.r * k;
-    const du = -o.u * k;
-    this.target.x += (dr - du) * Math.SQRT1_2;
-    this.target.z += (-dr - du) * Math.SQRT1_2;
+    this.target.addScaledVector(o.right, -o.r * k).addScaledVector(o.up, -o.u * k);
     return true;
   }
 

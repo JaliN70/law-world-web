@@ -267,3 +267,9 @@ html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after 
   body > *:not(#cert) { display: none !important; }
   #cert { position: static; background: none; }
 }
+
+/* 視角控制 */
+.view-ctl { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 6px; z-index: 5; }
+.view-ctl button { width: 44px; height: 44px; border-radius: 12px; border: 1.5px solid var(--brand, #1F4E79); background: rgba(255,255,255,.92); color: var(--brand, #1F4E79); font-size: 20px; line-height: 1; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+.view-ctl button:active { background: #e6eef7; }
+html.night .view-ctl button { background: rgba(20,32,56,.9); color: #cfe0f5; border-color: #5b7fa8; }

@@ -51,13 +51,13 @@ function ring({ id, rx, ru, island, plazaScale = 1, flags, sign }) {
 
 export const PRESETS = {
   // 桌機橫式
-  ring: ring({ id: 'ring', rx: 16.5, ru: 19, island: { hr: 24, hu: 28.5, chamfer: 9 }, flags: [[7.4, 0], [-7.4, 0]], sign: [4.4, -8.6] }),
+  ring: ring({ id: 'ring', rx: 16.5, ru: 19, island: { hr: 24, hu: 28.5, chamfer: 15 }, flags: [[7.4, 0], [-7.4, 0]], sign: [4.4, -8.6] }),
   // 手機直式：同樣是環狀，只是較高較窄
   ringTall: ring({
     id: 'ringTall',
     rx: 11.5,
     ru: 24,
-    island: { hr: 18.5, hu: 32, chamfer: 6 },
+    island: { hr: 18.5, hu: 32, chamfer: 10 },
     plazaScale: 0.8,
     flags: [[6, 0], [-6, 0]],
     sign: [3.4, -7.6],

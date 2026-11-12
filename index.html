@@ -33,6 +33,13 @@
       <div class="clouds" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       <canvas id="world" aria-label="法規園區 3D 場景：六棟建築環繞中央廣場。也可使用列表檢視。"></canvas>
       <div id="labels" class="labels"></div>
+      <div id="view-ctl" class="view-ctl" role="group" aria-label="視角控制">
+        <button type="button" id="btn-rot-l" aria-label="向左旋轉">⟲</button>
+        <button type="button" id="btn-rot-r" aria-label="向右旋轉">⟳</button>
+        <button type="button" id="btn-zoom-in" aria-label="放大">＋</button>
+        <button type="button" id="btn-zoom-out" aria-label="縮小">－</button>
+        <button type="button" id="btn-view-reset" aria-label="重設視角">⌂</button>
+      </div>
       <div id="tut-spot" class="tut-spot hidden" aria-hidden="true"></div>
       <section id="scene-task" class="scene-task hidden" aria-live="polite"></section>
       <div id="loading" class="loading" role="status">

@@ -332,11 +332,11 @@ function attachInput() {
   let pinch = null;
   el.canvas.addEventListener('pointerdown', (e) => {
     el.canvas.setPointerCapture(e.pointerId);
-    pts.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY });
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, rot: e.button === 2 || e.shiftKey });
     moved = false;
     if (pts.size === 2) {
       const [a, b] = [...pts.values()];
-      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: world.iso.zoom };
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: world.iso.zoom, ang: Math.atan2(b.y - a.y, b.x - a.x) };
     }
   });
   el.canvas.addEventListener('pointermove', (e) => {
@@ -350,9 +350,17 @@ function attachInput() {
     if (pts.size === 2 && pinch) {
       const [a, b] = [...pts.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
-      world.iso.setZoom(Math.min(2.2, Math.max(0.8, (pinch.z * d) / pinch.d)));
+      const { minZoom, maxZoom } = world.iso;
+      world.iso.setZoom(Math.min(maxZoom, Math.max(minZoom, (pinch.z * d) / pinch.d)));
+      // 雙指扭轉 → 旋轉視角
+      const ang = Math.atan2(b.y - a.y, b.x - a.x);
+      let da = ang - pinch.ang;
+      da = Math.atan2(Math.sin(da), Math.cos(da));
+      world.iso.rotateBy((-da * 180) / Math.PI);
+      pinch.ang = ang;
     } else if (pts.size === 1 && moved && !director.tw) {
-      world.iso.panBy(dx, dy, world.size.h);
+      if (p.rot) world.iso.rotateBy(-dx * 0.4);
+      else world.iso.panBy(dx, dy, world.size.h);
     }
   });
   const end = (e) => {
@@ -367,10 +375,19 @@ function attachInput() {
     'wheel',
     (e) => {
       e.preventDefault();
-      world.iso.setZoom(Math.min(2.2, Math.max(0.8, world.iso.zoom * (e.deltaY > 0 ? 0.9 : 1.1))));
+      const { minZoom, maxZoom } = world.iso;
+      world.iso.setZoom(Math.min(maxZoom, Math.max(minZoom, world.iso.zoom * (e.deltaY > 0 ? 0.9 : 1.1))));
     },
     { passive: false }
   );
+  el.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  // 視角控制：旋轉、放大縮小、重設
+  const view = (id, fn) => document.getElementById(id)?.addEventListener('click', () => !director.tw && fn());
+  view('btn-rot-l', () => world.iso.rotateBy(30));
+  view('btn-rot-r', () => world.iso.rotateBy(-30));
+  view('btn-zoom-in', () => world.iso.setZoom(Math.min(world.iso.maxZoom, world.iso.zoom * 1.25)));
+  view('btn-zoom-out', () => world.iso.setZoom(Math.max(world.iso.minZoom, world.iso.zoom / 1.25)));
+  view('btn-view-reset', () => director.overview(0.5));
 }
 
 function onTap(x, y) {
