@@ -95,14 +95,15 @@ export class World {
       o.material = o.name === 'plaza_logo' ? palette.glowing('plaza_logo') : palette.base;
     });
 
-    // 六棟建築：正面朝鏡頭；每棟一份可降飽和材質，發光零件另各一份
+    // 六棟建築：大門朝中央廣場；每棟一份可降飽和材質，發光零件另各一份
     for (const id of AREA_ORDER) {
       const [r, u] = P.buildings[id];
       const [x, z] = toWorld(r, u);
       const holder = new THREE.Group();
       holder.name = `${id}_holder`;
       holder.position.set(x, 0, z);
-      holder.rotation.y = BUILDING_YAW;
+      // 大門（模型 +Z）一律朝向中央廣場，與通往廣場的道路對齊
+      holder.rotation.y = Math.atan2(-x, -z);
       const b = templates[id].clone(true);
       b.name = id;
       b.scale.setScalar(BUILDING_SCALE);
