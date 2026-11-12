@@ -68,4 +68,32 @@ export function accessSign() {
   return group('access_sign', [meshNode('access_sign_mesh', p)]);
 }
 
-export const PROPS = { plaza, tree_round: treeRound, tree_cone: treeCone, bush, lamp, flag, access_sign: accessSign };
+/**
+ * 行人（低多邊形，約 1.7 m）：原點在兩腳之間、面向 +Z。
+ * 網站端以 InstancedMesh 沿道路行走；四種上衣配色取自園區色盤。
+ */
+function person(name, shirt, pants) {
+  const p = new Parts()
+    .box(0.17, 0.78, 0.2, pants, { x: -0.11 })
+    .box(0.17, 0.78, 0.2, pants, { x: 0.11 })
+    .box(0.5, 0.62, 0.3, shirt, { y: 0.78 })
+    .box(0.12, 0.56, 0.14, shirt, { x: -0.32, y: 0.82 })
+    .box(0.12, 0.56, 0.14, shirt, { x: 0.32, y: 0.82 })
+    .blob(0.17, 'soil', { y: 1.56 }, 1)
+    .box(0.3, 0.1, 0.3, 'dark', { y: 1.66 });
+  return group(name, [meshNode(`${name}_mesh`, p)]);
+}
+
+export const PROPS = {
+  plaza,
+  tree_round: treeRound,
+  tree_cone: treeCone,
+  bush,
+  lamp,
+  flag,
+  access_sign: accessSign,
+  person_a: () => person('person_a', 'telecom', 'dark'),
+  person_b: () => person('person_b', 'yellow', 'brand'),
+  person_c: () => person('person_c', 'accessibility', 'dark'),
+  person_d: () => person('person_d', 'fire', 'building'),
+};

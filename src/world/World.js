@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { AREA_ORDER } from '../data/areas.js';
-import { PRESETS, toWorld, BUILDING_YAW, PLOT_HALF } from './layout.js';
+import { PRESETS, toWorld, BUILDING_YAW, PLOT_HALF, PLAZA_R, ROAD_W } from './layout.js';
 import { buildGround, buildRoads, scatterTrees, lampSpots, blobShadowTexture } from './terrain.js';
 import { IsoCamera } from './camera.js';
 import { Effects } from './effects.js';
@@ -51,7 +51,7 @@ export class World {
 
   /** 依目前螢幕決定布局；不同才重建 */
   applyLayout() {
-    const id = this.mq.matches ? 'grid' : 'ring';
+    const id = this.mq.matches ? 'ringTall' : 'ring';
     if (this.preset?.id === id) return false;
     this.preset = PRESETS[id];
     this.build();
@@ -235,11 +235,122 @@ export class World {
     bridge.receiveShadow = true;
     this.root.add(bridge);
 
+    this.buildPeople();
+
     this.props = { lamps: lampGroup, flags, sign, bridge, plaza, lampHeadMat };
     this.effects.bind();
     this.setNight(this.night);
     this.setShadows(!this.lowEnd);
     this.fit();
+  }
+
+  /**
+   * 行人：沿每條道路兩側的人行位置來回走（往返之間會停一下），另有幾位繞廣場散步。
+   * 每種穿著一個 InstancedMesh，每幀只更新矩陣。
+   */
+  buildPeople() {
+    const P = this.preset;
+    const { templates, palette } = this.park;
+    const variants = ['person_a', 'person_b', 'person_c', 'person_d'];
+    const rand = (() => {
+      let x = P.id === 'ring' ? 3 : 9;
+      return () => ((x = (x * 1664525 + 1013904223) >>> 0) / 4294967296);
+    })();
+    const plazaR = PLAZA_R * (P.plazaScale || 1);
+    const walkers = [];
+    for (const [a, b] of P.roads) {
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const dir = [(b[0] - a[0]) / len, (b[1] - a[1]) / len];
+      const s0 = plazaR + 0.8;
+      const s1 = len - PLOT_HALF - 0.8;
+      if (s1 - s0 < 2) continue;
+      for (const side of [-1, 1]) {
+        if (rand() < 0.25) continue;
+        walkers.push({
+          kind: 'line',
+          a: [a[0] + dir[0] * s0, a[1] + dir[1] * s0],
+          dir,
+          len: s1 - s0,
+          off: side * (ROAD_W / 2 - 0.45),
+          s: rand() * (s1 - s0),
+          v: (0.9 + rand() * 0.5) * (rand() < 0.5 ? 1 : -1),
+          pause: 0,
+          variant: variants[walkers.length % variants.length],
+          phase: rand() * 10,
+        });
+      }
+    }
+    for (let i = 0; i < 3; i++) {
+      walkers.push({
+        kind: 'loop',
+        r: plazaR + 0.9,
+        ang: (i / 3) * Math.PI * 2 + rand(),
+        v: (0.12 + rand() * 0.05) * (i % 2 ? 1 : -1),
+        variant: variants[(i + 1) % variants.length],
+        phase: rand() * 10,
+      });
+    }
+    this.people = { walkers, meshes: {} };
+    for (const v of variants) {
+      const list = walkers.filter((w) => w.variant === v);
+      if (!list.length) continue;
+      const src = templates[v].getObjectByProperty('isMesh', true);
+      const inst = new THREE.InstancedMesh(src.geometry, palette.base, list.length);
+      inst.castShadow = true;
+      inst.frustumCulled = false;
+      inst.name = `people_${v}`;
+      inst.userData.base = src.matrixWorld.clone();
+      list.forEach((w, i) => (w.slot = i));
+      this.root.add(inst);
+      this.people.meshes[v] = inst;
+    }
+    this.updatePeople(0, 0, true);
+  }
+
+  updatePeople(dt, t, force = false) {
+    if (!this.people) return;
+    const moving = !this.effects.reduced;
+    if (!moving && !force) return;
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const pos = new THREE.Vector3();
+    const one = new THREE.Vector3(1.25, 1.25, 1.25); // 略放大，概覽時也看得出是人
+    const up = new THREE.Vector3(0, 1, 0);
+    for (const w of this.people.walkers) {
+      let r, u, dr, du;
+      if (w.kind === 'line') {
+        if (w.pause > 0) w.pause -= dt;
+        else {
+          w.s += w.v * dt;
+          if (w.s > w.len || w.s < 0) {
+            w.s = Math.max(0, Math.min(w.len, w.s));
+            w.v = -w.v;
+            w.pause = 0.6 + Math.random() * 1.5; // 到端點停一下再折返
+          }
+        }
+        const sgn = Math.sign(w.v);
+        r = w.a[0] + w.dir[0] * w.s - w.dir[1] * w.off;
+        u = w.a[1] + w.dir[1] * w.s + w.dir[0] * w.off;
+        dr = w.dir[0] * sgn;
+        du = w.dir[1] * sgn;
+      } else {
+        w.ang += w.v * dt;
+        r = Math.cos(w.ang) * w.r;
+        u = Math.sin(w.ang) * w.r;
+        const sgn = Math.sign(w.v);
+        dr = -Math.sin(w.ang) * sgn;
+        du = Math.cos(w.ang) * sgn;
+      }
+      const [x, z] = toWorld(r, u);
+      const [x2, z2] = toWorld(r + dr, u + du);
+      const walking = w.kind === 'loop' || w.pause <= 0;
+      const bob = moving && walking ? Math.abs(Math.sin((t + w.phase) * 7)) * 0.07 : 0;
+      pos.set(x, 0.07 + bob, z);
+      q.setFromAxisAngle(up, Math.atan2(x2 - x, z2 - z));
+      m.compose(pos, q, one).multiply(this.people.meshes[w.variant].userData.base);
+      this.people.meshes[w.variant].setMatrixAt(w.slot, m);
+    }
+    for (const inst of Object.values(this.people.meshes)) inst.instanceMatrix.needsUpdate = true;
   }
 
   /** 相機框住整座島（含岩底與建築頂） */
@@ -258,7 +369,7 @@ export class World {
       const box = new THREE.Box3().setFromObject(b.model.getObjectByName(b.id));
       for (const x of [box.min.x, box.max.x]) for (const z of [box.min.z, box.max.z]) pts.push(new THREE.Vector3(x, box.max.y + 2.5, z));
     }
-    const mobile = P.id === 'grid';
+    const mobile = P.id === 'ringTall';
     this.iso.fit(pts, w, h, { margin: mobile ? 0.03 : 0.06, reserveTop: this.reserve.top, reserveBottom: this.reserve.bottom });
     this.iso.panLimit = { r: P.island.hr * 0.55, u: P.island.hu * 0.55 };
     // 陰影相機涵蓋整座島
@@ -392,6 +503,7 @@ export class World {
 
   render(dt, t) {
     this.effects.update(dt, t);
+    this.updatePeople(dt, t);
     this.iso.update();
     this.renderer.render(this.scene, this.iso.camera);
   }

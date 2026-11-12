@@ -480,7 +480,7 @@ function loop() {
     if (tutorial.active) {
       const b = tutorial.step.spot ? world.buildings[tutorial.step.spot] : null;
       const p = b && world.iso.project(b.center.clone().setY(Math.min(b.top, 8) * 0.45), world.size.w, world.size.h);
-      tutorial.placeSpot(p, Math.min(world.size.w, world.size.h) * (world.preset.id === 'grid' ? 0.42 : 0.26));
+      tutorial.placeSpot(p, Math.min(world.size.w, world.size.h) * (world.preset.id === 'ringTall' ? 0.38 : 0.26));
     }
     if (!world.lowEnd) watchFps(dt);
   };

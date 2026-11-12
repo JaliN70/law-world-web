@@ -170,7 +170,7 @@ export function scatterTrees(preset) {
   const plots = Object.values(preset.buildings);
   const keep = [...preset.flags, preset.sign];
   const spots = [];
-  const target = preset.id === 'ring' ? 34 : 22;
+  const target = preset.id === 'ring' ? 34 : 26;
   for (let tries = 0; tries < 3000 && spots.length < target; tries++) {
     const p = [(rand() * 2 - 1) * preset.island.hr, (rand() * 2 - 1) * preset.island.hu];
     if (!pointInPolygon(p, poly)) continue;
