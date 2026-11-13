@@ -127,7 +127,7 @@ export function buildIsland(preset) {
         const moss = Math.sin(i * 0.9 + l * 1.9) + Math.sin(i * 0.41 - l * 1.1);
         const n2 = Math.sin(i * 1.7 + l * 0.9);
         if (moss > 0.45 + depth * 0.12) color = ['canopy', 'grassDark', 'grass'][(i + l) % 3];
-        else if (depth < 3) color = n2 > 0.85 ? 'soil' : n2 > -0.2 ? 'road' : 'building'; // 褐色只留零星一點
+        else if (depth < 3) color = n2 > 0.3 ? 'road' : 'building';
         else if (depth < 8) color = n2 > 0 ? 'road' : 'building';
         else color = n2 > 0 ? 'building' : 'dark';
       }
