@@ -304,7 +304,7 @@ function placeLabels() {
   const W = world.size.w;
   for (const id of AREA_ORDER) {
     const p = pos[id];
-    const x = Math.round(Math.max(36, Math.min(W - 36, p.x)));
+    const x = Math.round(Math.max(36, Math.min(W - 36, p.x + (id === 'telecom' ? 26 : 0))));
     const y = Math.round(Math.max(56, p.y));
     const key = `${x},${y}`;
     if (lastLabel[id] === key) continue;

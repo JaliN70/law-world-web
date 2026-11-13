@@ -211,6 +211,11 @@ export function accessibility() {
   p.windows('+z', { count: 3, w: 1.0, h: 0.9, gap: 0.9, y: 3.3, offset: 1.7, along: 0 });
   p.windows('+x', { count: 3, w: 0.9, h: 1.1, gap: 0.5, y: 1.4, offset: 3.6, along: -0.9 });
   p.windows('+x', { count: 3, w: 0.9, h: 0.9, gap: 0.5, y: 3.3, offset: 3.6, along: -0.9 });
+  // 背面與另一側窗（建築大門朝向廣場，背面會朝向鏡頭）
+  p.windows('-z', { count: 3, w: 1.0, h: 1.1, gap: 0.9, y: 1.4, offset: 3.5, along: 0 });
+  p.windows('-z', { count: 3, w: 1.0, h: 0.9, gap: 0.9, y: 3.3, offset: 3.5, along: 0 });
+  p.windows('-x', { count: 3, w: 0.9, h: 1.1, gap: 0.5, y: 1.4, offset: 3.6, along: -0.9 });
+  p.windows('-x', { count: 3, w: 0.9, h: 0.9, gap: 0.5, y: 3.3, offset: 3.6, along: -0.9 });
   p.tree('bush', { x: 3.2, z: 3.2 }, 0.7);
 
   const main = meshNode('accessibility', p);
