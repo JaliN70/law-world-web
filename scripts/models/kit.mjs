@@ -1,11 +1,11 @@
 /**
- * 低多邊形建模小工具：以 three.js 幾何體拼裝，所有面以 UV 指向 4×4 園區色盤的格心。
+ * 低多邊形建模小工具：以 three.js 幾何體拼裝，所有面以 UV 指向 4×5 園區色盤的格心。
  * 只在 Node 端產生模型用，不進網站 bundle。
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
-/** 藍圖 §2.1 園區色盤（4×4，每格一色；順序即圖集位置，列優先） */
+/** 藍圖 §2.1 園區色盤（4×5，每格一色；順序即圖集位置，列優先） */
 export const PALETTE = [
   ['brand', '#1F4E79'],
   ['logoRed', '#FF0000'],
@@ -23,6 +23,7 @@ export const PALETTE = [
   ['dark', '#4B5563'],
   ['yellow', '#F2C94C'],
   ['waterBlue', '#5DADE2'],
+  ['glass', '#3B4A63'], // 窗玻璃：白天深藍灰，夜間由著色器點亮
 ];
 const CELL = Object.fromEntries(PALETTE.map(([name], i) => [name, i]));
 
@@ -30,7 +31,7 @@ const CELL = Object.fromEntries(PALETTE.map(([name], i) => [name, i]));
 export function cellUV(color) {
   const i = CELL[color];
   if (i === undefined) throw new Error(`unknown palette color: ${color}`);
-  return [((i % 4) + 0.5) / 4, (Math.floor(i / 4) + 0.5) / 4];
+  return [((i % 4) + 0.5) / 4, (Math.floor(i / 4) + 0.5) / 5];
 }
 
 function paint(geo, color) {
@@ -128,8 +129,15 @@ export class Parts {
     return this;
   }
 
+  /** 磚縫：每隔 step 一道略比牆大的細條，四面牆一次到位 */
+  courses(w, h, d, at = {}, color = 'soil', step = 0.55, from = 0.75) {
+    const { x = 0, y = 0, z = 0 } = at;
+    for (let yy = from; yy < h - 0.25; yy += step) this.box(w + 0.04, 0.05, d + 0.04, color, { x, y: y + yy, z });
+    return this;
+  }
+
   /** 牆面窗列：在 face（'+z' | '-z' | '+x' | '-x'）平面上排一列窗 */
-  windows(face, { count, w, h, gap, y, offset, along = 0 }, color = 'dark', frame = 'light') {
+  windows(face, { count, w, h, gap, y, offset, along = 0 }, color = 'glass', frame = 'light') {
     const total = count * w + (count - 1) * gap;
     for (let i = 0; i < count; i++) {
       const c = along - total / 2 + w / 2 + i * (w + gap);

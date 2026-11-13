@@ -1,15 +1,15 @@
 /**
  * 依布局即時產生：浮島（草地頂面＋分層岸壁）、道路、樹木位置、路燈位置。
- * 全部以色盤 UV 上色，和 park.glb 共用同一張 4×4 色盤與材質。
+ * 全部以色盤 UV 上色，和 park.glb 共用同一張 4×5 色盤與材質。
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { toWorld, islandOutline, pointInPolygon, distToSegment, PLAZA_R, PLOT_HALF, ROAD_W } from './layout.js';
 
-const CELLS = ['brand', 'logoRed', 'fire', 'building', 'telecom', 'accessibility', 'water', 'electrical', 'road', 'grass', 'canopy', 'soil', 'light', 'dark', 'yellow', 'waterBlue'];
+const CELLS = ['brand', 'logoRed', 'fire', 'building', 'telecom', 'accessibility', 'water', 'electrical', 'road', 'grass', 'canopy', 'soil', 'light', 'dark', 'yellow', 'waterBlue', 'glass'];
 export function cellUV(color) {
   const i = CELLS.indexOf(color);
-  return [((i % 4) + 0.5) / 4, (Math.floor(i / 4) + 0.5) / 4];
+  return [((i % 4) + 0.5) / 4, (Math.floor(i / 4) + 0.5) / 5];
 }
 
 /** 可重現的亂數（同一布局每次長得一樣） */
@@ -91,11 +91,11 @@ export function buildIsland(preset) {
   const layers = [
     { y: 0, inset: 0, jitter: 0 },
     { y: -0.6, inset: 0, jitter: 0, color: 'canopy' },
-    { y: -1.9, inset: 0.15, jitter: 0.3, color: 'soil' },
-    { y: -3.4, inset: 0.4, jitter: 0.45, color: 'soil' },
-    { y: -5.4, inset: 1.1, jitter: 0.7, color: 'building' },
-    { y: -7.6, inset: 2.6, jitter: 0.9, color: 'building' },
-    { y: -9.4, inset: 5.5, jitter: 0.8, color: 'dark' },
+    { y: -2.4, inset: 0.15, jitter: 0.3, color: 'soil' },
+    { y: -4.6, inset: 0.45, jitter: 0.5, color: 'soil' },
+    { y: -7.4, inset: 1.3, jitter: 0.8, color: 'building' },
+    { y: -10.6, inset: 3.4, jitter: 1.0, color: 'building' },
+    { y: -14.0, inset: 7.5, jitter: 0.9, color: 'dark' },
   ];
   const cx = 0;
   const cu = 0;
@@ -116,7 +116,7 @@ export function buildIsland(preset) {
     }
   }
   // 底部收尖
-  const bottom = [0, -13, 0];
+  const bottom = [0, -19, 0];
   const last = rings[rings.length - 1];
   for (let i = 0; i < n; i++) t.tri(last[i], bottom, last[(i + 1) % n], 'dark');
   return t.orientFrom(0, -3, 0).geometry();
