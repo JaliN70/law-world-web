@@ -24,6 +24,8 @@ export const PALETTE = [
   ['yellow', '#F2C94C'],
   ['waterBlue', '#5DADE2'],
   ['glass', '#3B4A63'], // 窗玻璃：白天深藍灰，夜間由著色器點亮
+  ['grassLight', '#B6DE92'], // 草地色塊（亮）
+  ['grassDark', '#5C9749'], // 草地色塊（暗）
 ];
 const CELL = Object.fromEntries(PALETTE.map(([name], i) => [name, i]));
 
