@@ -2,7 +2,7 @@
   {
     "name": "fire",
     "kind": "building",
-    "triangles": 1040,
+    "triangles": 1160,
     "min": [
       -4,
       0,
@@ -17,7 +17,7 @@
   {
     "name": "building",
     "kind": "building",
-    "triangles": 872,
+    "triangles": 932,
     "min": [
       -4,
       0,
@@ -32,7 +32,7 @@
   {
     "name": "telecom",
     "kind": "building",
-    "triangles": 1220,
+    "triangles": 1280,
     "min": [
       -4,
       0,
@@ -47,7 +47,7 @@
   {
     "name": "accessibility",
     "kind": "building",
-    "triangles": 1040,
+    "triangles": 1100,
     "min": [
       -4,
       0,
@@ -62,7 +62,7 @@
   {
     "name": "water",
     "kind": "building",
-    "triangles": 904,
+    "triangles": 964,
     "min": [
       -4,
       0,
