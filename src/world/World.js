@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { AREA_ORDER } from '../data/areas.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Sky } from './sky.js';
 import { PRESETS, toWorld, BUILDING_YAW, BUILDING_SCALE, PLOT_HALF, PLAZA_R, ROAD_W } from './layout.js';
-import { buildGround, buildRoads, scatterTrees, lampSpots, blobShadowTexture } from './terrain.js';
+import { buildGround, buildRoads, scatterTrees, scatterFlowers, scatterEdge, cellUV, lampSpots, blobShadowTexture } from './terrain.js';
 import { IsoCamera } from './camera.js';
 import { Effects } from './effects.js';
 
@@ -172,6 +173,76 @@ export class World {
       });
       inst.castShadow = true;
       inst.name = type;
+      this.root.add(inst);
+    }
+
+    // 野花：小方塊＋細莖，依花色各一個 InstancedMesh
+    const flowers = scatterFlowers(P);
+    for (const color of ['yellow', 'light', 'electrical', 'fire']) {
+      const list = flowers.filter((f) => f.color === color);
+      if (!list.length) continue;
+      const stem = new THREE.BoxGeometry(0.05, 0.28, 0.05).translate(0, 0.14, 0).toNonIndexed();
+      const head = new THREE.BoxGeometry(0.2, 0.14, 0.2).translate(0, 0.33, 0).toNonIndexed();
+      const setUV = (g, c) => {
+        const [u, v] = cellUV(c);
+        const uv = new Float32Array(g.attributes.position.count * 2);
+        for (let i = 0; i < uv.length; i += 2) [uv[i], uv[i + 1]] = [u, v];
+        g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+        g.deleteAttribute('normal');
+        return g;
+      };
+      const geo = mergeGeometries([setUV(stem, 'canopy'), setUV(head, color)], false);
+      const inst = new THREE.InstancedMesh(geo, palette.base, list.length);
+      const m = new THREE.Matrix4();
+      const q = new THREE.Quaternion();
+      list.forEach((f, i) => {
+        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), f.rot);
+        m.compose(new THREE.Vector3(f.x, 0.02, f.z), q, new THREE.Vector3().setScalar(1.35 + (i % 3) * 0.2));
+        inst.setMatrixAt(i, m);
+      });
+      inst.userData.ownGeometry = true;
+      inst.name = `flowers_${color}`;
+      this.root.add(inst);
+    }
+
+    // 島緣：沿岸岩石與垂下的藤蔓
+    const edge = scatterEdge(P);
+    const tint = (g, c) => {
+      const [u, v] = cellUV(c);
+      const uv = new Float32Array(g.attributes.position.count * 2);
+      for (let i = 0; i < uv.length; i += 2) [uv[i], uv[i + 1]] = [u, v];
+      g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+      g.deleteAttribute('normal');
+      return g;
+    };
+    for (const color of ['building', 'light']) {
+      const list = edge.rocks.filter((r) => r.color === color);
+      if (!list.length) continue;
+      const inst = new THREE.InstancedMesh(tint(new THREE.IcosahedronGeometry(1, 0).scale(1.15, 0.75, 1).toNonIndexed(), color), palette.base, list.length);
+      const m = new THREE.Matrix4();
+      const q = new THREE.Quaternion();
+      list.forEach((r, i) => {
+        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), r.rot);
+        m.compose(new THREE.Vector3(r.x, 0.12 * r.s, r.z), q, new THREE.Vector3().setScalar(r.s));
+        inst.setMatrixAt(i, m);
+      });
+      inst.castShadow = true;
+      inst.userData.ownGeometry = true;
+      inst.name = `edge_rocks_${color}`;
+      this.root.add(inst);
+    }
+    {
+      const geo = tint(new THREE.BoxGeometry(0.26, 1, 0.26).translate(0, -0.5, 0).toNonIndexed(), 'canopy');
+      const inst = new THREE.InstancedMesh(geo, palette.base, edge.vines.length);
+      const m = new THREE.Matrix4();
+      const q = new THREE.Quaternion();
+      edge.vines.forEach((v, i) => {
+        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), v.rot);
+        m.compose(new THREE.Vector3(v.x, -0.35, v.z), q, new THREE.Vector3(1, v.len, 1));
+        inst.setMatrixAt(i, m);
+      });
+      inst.userData.ownGeometry = true;
+      inst.name = 'edge_vines';
       this.root.add(inst);
     }
 

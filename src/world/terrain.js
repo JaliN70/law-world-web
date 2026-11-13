@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { toWorld, islandOutline, pointInPolygon, distToSegment, PLAZA_R, PLOT_HALF, ROAD_W } from './layout.js';
 
-const CELLS = ['brand', 'logoRed', 'fire', 'building', 'telecom', 'accessibility', 'water', 'electrical', 'road', 'grass', 'canopy', 'soil', 'light', 'dark', 'yellow', 'waterBlue', 'glass'];
+const CELLS = ['brand', 'logoRed', 'fire', 'building', 'telecom', 'accessibility', 'water', 'electrical', 'road', 'grass', 'canopy', 'soil', 'light', 'dark', 'yellow', 'waterBlue', 'glass', 'grassLight', 'grassDark'];
 export function cellUV(color) {
   const i = CELLS.indexOf(color);
   return [((i % 4) + 0.5) / 4, (Math.floor(i / 4) + 0.5) / 5];
@@ -81,16 +81,23 @@ export function buildIsland(preset) {
     return [x, y, z];
   };
   const n = outline.length;
-  // 頂面（扇形三角化；外框為凸多邊形）
+  // 頂面（扇形三角化；外框為凸多邊形）：邊緣內縮 0.55 m，外側留給圓潤的草緣
+  const LIP = 0.55;
+  const top = outline.map(([r, u]) => {
+    const d = Math.hypot(r, u) || 1;
+    const k = (d - LIP) / d;
+    return [r * k, u * k];
+  });
   for (let i = 0; i < n; i++) {
-    const [ar, au] = outline[i];
-    const [br, bu] = outline[(i + 1) % n];
+    const [ar, au] = top[i];
+    const [br, bu] = top[(i + 1) % n];
     t.tri(W(0, 0, 0), W(br, bu, 0), W(ar, au, 0), 'grass');
   }
   // 岸壁分層：每層向內收、往下並帶一點起伏
   const layers = [
-    { y: 0, inset: 0, jitter: 0 },
-    { y: -0.6, inset: 0, jitter: 0, color: 'canopy' },
+    { y: 0, inset: LIP, jitter: 0 },
+    { y: -0.22, inset: 0, jitter: 0, color: 'grassLight' }, // 草緣：略亮、向外鼓出
+    { y: -0.8, inset: 0.05, jitter: 0, color: 'canopy' },
     { y: -2.4, inset: 0.15, jitter: 0.3, color: 'soil' },
     { y: -4.6, inset: 0.45, jitter: 0.5, color: 'soil' },
     { y: -7.4, inset: 1.3, jitter: 0.8, color: 'building' },
@@ -159,9 +166,94 @@ export function buildRoads(segments, { width = ROAD_W, color = 'road', dashes = 
   return t.pos.length ? t.orientFrom(0, -1000, 0).geometry() : null;
 }
 
-/** 合併成一個地形幾何（島＋道路），一次 draw call */
+/**
+ * 草地色塊：在草地上疊幾片不規則的亮／暗綠斑塊（略高於草面），
+ * 大塊再套一層小塊，讓大片綠地有深淺層次。建築地塊與道路都更高，會自然蓋住底下的色塊。
+ */
+export function buildGrassPatches(preset) {
+  const rand = rng(preset.id === 'ring' ? 33 : 17);
+  const poly = islandOutline({ ...preset.island, hr: preset.island.hr - 5, hu: preset.island.hu - 5 });
+  const t = new Tris();
+  const W = (r, u, y) => {
+    const [x, z] = toWorld(r, u);
+    return [x, y, z];
+  };
+  const blob = (cr, cu, R, color, y) => {
+    const n = 9;
+    const rot = rand() * Math.PI;
+    const sx = 0.8 + rand() * 0.5;
+    const ring = [];
+    for (let i = 0; i < n; i++) {
+      const a = rot + (i / n) * Math.PI * 2;
+      const k = R * (0.72 + rand() * 0.45);
+      ring.push([cr + Math.cos(a) * k * sx, cu + Math.sin(a) * k]);
+    }
+    for (let i = 0; i < n; i++) t.tri(W(cr, cu, y), W(...ring[(i + 1) % n], y), W(...ring[i], y), color);
+  };
+  const count = preset.id === 'ring' ? 30 : 22;
+  for (let placed = 0, tries = 0; placed < count && tries < 400; tries++) {
+    const c = [(rand() * 2 - 1) * preset.island.hr, (rand() * 2 - 1) * preset.island.hu];
+    if (!pointInPolygon(c, poly)) continue;
+    const R = 1.8 + rand() * 3.6;
+    const light = rand() < 0.5;
+    blob(c[0], c[1], R, light ? 'grassLight' : 'grassDark', 0.025);
+    if (R > 3) blob(c[0] + (rand() - 0.5) * 1.2, c[1] + (rand() - 0.5) * 1.2, R * 0.5, light ? 'grassDark' : 'grassLight', 0.03);
+    placed++;
+  }
+  return t.pos.length ? t.orientFrom(0, -1000, 0).geometry() : null;
+}
+
+/** 野花位置：避開廣場、建築地塊與道路 */
+export function scatterFlowers(preset) {
+  const rand = rng(preset.id === 'ring' ? 91 : 47);
+  const poly = islandOutline({ ...preset.island, hr: preset.island.hr - 2.4, hu: preset.island.hu - 2.4 });
+  const plots = Object.values(preset.buildings);
+  const colors = ['yellow', 'light', 'electrical', 'fire'];
+  const out = [];
+  const target = preset.id === 'ring' ? 90 : 64;
+  for (let tries = 0; tries < 4000 && out.length < target; tries++) {
+    // 成簇：一半的花長在既有花旁
+    const a = out.length > 3 && rand() < 0.6 ? out[Math.floor(rand() * out.length)] : null;
+    const p = a ? [a.r + (rand() * 2 - 1) * 1.6, a.u + (rand() * 2 - 1) * 1.6] : [(rand() * 2 - 1) * preset.island.hr, (rand() * 2 - 1) * preset.island.hu];
+    if (!pointInPolygon(p, poly)) continue;
+    if (Math.hypot(p[0], p[1]) < PLAZA_R * (preset.plazaScale || 1) + 1.2) continue;
+    if (plots.some(([r, u]) => Math.abs(p[0] - r) < PLOT_HALF + 0.8 && Math.abs(p[1] - u) < PLOT_HALF + 0.8)) continue;
+    if (preset.roads.some((seg) => distToSegment(p, seg) < ROAD_W / 2 + 0.8)) continue;
+    const [x, z] = toWorld(p[0], p[1]);
+    out.push({ r: p[0], u: p[1], x, z, color: a ? a.color : colors[Math.floor(rand() * colors.length)], rot: rand() * Math.PI });
+  }
+  return out;
+}
+
+/** 島緣小物：沿岸的岩石與垂下的藤蔓（位置以世界座標回傳） */
+export function scatterEdge(preset) {
+  const rand = rng(preset.id === 'ring' ? 58 : 29);
+  const outline = densify(islandOutline(preset.island), 1.4);
+  const place = (inset) => {
+    const [r, u] = outline[Math.floor(rand() * outline.length)];
+    const d = Math.hypot(r, u) || 1;
+    const k = (d - inset) / d;
+    const [x, z] = toWorld(r * k, u * k);
+    return { x, z, r: r * k, u: u * k };
+  };
+  const plots = Object.values(preset.buildings);
+  const clear = (p) => !plots.some(([r, u]) => Math.abs(p.r - r) < PLOT_HALF + 0.4 && Math.abs(p.u - u) < PLOT_HALF + 0.4);
+  const rocks = [];
+  for (let tries = 0; tries < 400 && rocks.length < (preset.id === 'ring' ? 26 : 20); tries++) {
+    const p = place(0.9 + rand() * 0.9);
+    if (clear(p)) rocks.push({ ...p, s: 0.28 + rand() * 0.45, rot: rand() * 6.28, color: rand() < 0.7 ? 'building' : 'light' });
+  }
+  const vines = [];
+  for (let i = 0; i < (preset.id === 'ring' ? 40 : 30); i++) {
+    const p = place(0.62);
+    vines.push({ ...p, len: 1.2 + rand() * 3.2, rot: rand() * 6.28 });
+  }
+  return { rocks, vines };
+}
+
+/** 合併成一個地形幾何（島＋色塊＋道路），一次 draw call */
 export function buildGround(preset) {
-  const parts = [buildIsland(preset), buildRoads(preset.roads)].filter(Boolean);
+  const parts = [buildIsland(preset), buildGrassPatches(preset), buildRoads(preset.roads)].filter(Boolean);
   return mergeGeometries(parts, false);
 }
 
