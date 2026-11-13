@@ -21,11 +21,13 @@ export function fire() {
   // 主車庫量體
   p.box(5.2, 4.4, 5, B, { x: -1.1, y: 0.15, z: -0.3 });
   p.shell(5.2, 4.4, 5, { x: -1.1, y: 0.15, z: -0.3 });
+  p.courses(5.2, 4.4, 5, { x: -1.1, y: 0.15, z: -0.3 });
   p.box(5.4, 0.3, 5.2, 'light', { x: -1.1, y: 4.55, z: -0.3 }); // 簷口
   p.parapet(5.2, 5, 0.2, 0.5, B, { x: -1.1, y: 4.85, z: -0.3 });
   // 右後方辦公翼（L 形）
   p.box(2.2, 3.2, 3.2, B, { x: 2.6, y: 0.15, z: -1.2 });
   p.shell(2.2, 3.2, 3.2, { x: 2.6, y: 0.15, z: -1.2 });
+  p.courses(2.2, 3.2, 3.2, { x: 2.6, y: 0.15, z: -1.2 });
   p.box(2.4, 0.25, 3.4, 'light', { x: 2.6, y: 3.35, z: -1.2 });
   p.windows('+z', { count: 1, w: 0.9, h: 1.0, gap: 0, y: 1.6, offset: 0.4, along: 2.6 });
   p.windows('+x', { count: 2, w: 0.8, h: 1.0, gap: 0.5, y: 1.6, offset: 3.7, along: -1.2 });
@@ -42,6 +44,7 @@ export function fire() {
   const tx = -2.6;
   const tz = -2.0;
   p.box(1.9, 8.2, 1.9, B, { x: tx, y: 0.15, z: tz });
+  p.courses(1.9, 8.2, 1.9, { x: tx, y: 0.15, z: tz }, 'soil', 0.55, 0.5);
   p.box(2.3, 0.25, 2.3, 'light', { x: tx, y: 8.35, z: tz });
   p.box(2.1, 1.3, 2.1, 'light', { x: tx, y: 8.6, z: tz }); // 瞭望室
   p.box(2.15, 0.7, 2.15, 'dark', { x: tx, y: 8.85, z: tz }); // 瞭望窗帶
@@ -86,6 +89,7 @@ export function building() {
   const B = 'building';
   p.box(6.4, 6.6, 5.8, B, { y: 0.15, z: -0.6 });
   p.shell(6.4, 6.6, 5.8, { y: 0.15, z: -0.6 });
+  p.box(6.5, 0.14, 5.9, 'light', { y: 3.3, z: -0.6 }); // 樓層帶
   p.box(6.6, 0.3, 6.0, 'light', { y: 6.75, z: -0.6 });
   p.parapet(6.4, 5.8, 0.2, 0.45, B, { y: 7.05, z: -0.6 });
   p.box(1.6, 0.9, 1.4, 'light', { x: -1.4, y: 7.05, z: -1.4 }); // 屋頂機房

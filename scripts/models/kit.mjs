@@ -128,6 +128,13 @@ export class Parts {
     return this;
   }
 
+  /** 磚縫：每隔 step 一道略比牆大的細條，四面牆一次到位 */
+  courses(w, h, d, at = {}, color = 'soil', step = 0.55, from = 0.75) {
+    const { x = 0, y = 0, z = 0 } = at;
+    for (let yy = from; yy < h - 0.25; yy += step) this.box(w + 0.04, 0.05, d + 0.04, color, { x, y: y + yy, z });
+    return this;
+  }
+
   /** 牆面窗列：在 face（'+z' | '-z' | '+x' | '-x'）平面上排一列窗 */
   windows(face, { count, w, h, gap, y, offset, along = 0 }, color = 'dark', frame = 'light') {
     const total = count * w + (count - 1) * gap;

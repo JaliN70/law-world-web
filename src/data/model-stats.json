@@ -2,7 +2,7 @@
   {
     "name": "fire",
     "kind": "building",
-    "triangles": 1160,
+    "triangles": 1460,
     "min": [
       -4,
       0,
@@ -17,7 +17,7 @@
   {
     "name": "building",
     "kind": "building",
-    "triangles": 932,
+    "triangles": 944,
     "min": [
       -4,
       0,

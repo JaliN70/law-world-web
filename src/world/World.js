@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { AREA_ORDER } from '../data/areas.js';
+import { Sky } from './sky.js';
 import { PRESETS, toWorld, BUILDING_YAW, BUILDING_SCALE, PLOT_HALF, PLAZA_R, ROAD_W } from './layout.js';
 import { buildGround, buildRoads, scatterTrees, lampSpots, blobShadowTexture } from './terrain.js';
 import { IsoCamera } from './camera.js';
@@ -238,6 +239,7 @@ export class World {
     this.root.add(bridge);
 
     this.buildPeople();
+    this.sky = new Sky(this.root, P);
 
     this.props = { lamps: lampGroup, flags, sign, bridge, plaza, lampHeadMat };
     this.effects.bind();
@@ -364,7 +366,7 @@ export class World {
     const { hr, hu } = P.island;
     for (const [r, u] of [[hr, hu], [-hr, hu], [hr, -hu], [-hr, -hu], [0, hu], [0, -hu], [hr, 0], [-hr, 0]]) {
       const [x, z] = toWorld(r, u);
-      pts.push(new THREE.Vector3(x, 0, z), new THREE.Vector3(x * 0.85, -7.6, z * 0.85));
+      pts.push(new THREE.Vector3(x, 0, z), new THREE.Vector3(x * 0.7, -10, z * 0.7));
     }
     // 建築外框（含塔頂）＋標籤高度
     for (const b of Object.values(this.buildings)) {
@@ -420,6 +422,7 @@ export class World {
     this.sun.color.set(s.sun[0]);
     this.sun.intensity = s.sun[1];
     document.documentElement.classList.toggle('night', on);
+    this.sky?.setNight(on);
     this.effects.setNight(on);
   }
 
@@ -511,6 +514,7 @@ export class World {
   render(dt, t) {
     this.effects.update(dt, t);
     this.updatePeople(dt, t);
+    if (!this.effects.reduced && !this.lowEnd) this.sky?.update(dt);
     this.iso.update();
     this.renderer.render(this.scene, this.iso.camera);
   }
