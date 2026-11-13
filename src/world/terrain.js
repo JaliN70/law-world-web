@@ -81,16 +81,23 @@ export function buildIsland(preset) {
     return [x, y, z];
   };
   const n = outline.length;
-  // 頂面（扇形三角化；外框為凸多邊形）
+  // 頂面（扇形三角化；外框為凸多邊形）：邊緣內縮 0.55 m，外側留給圓潤的草緣
+  const LIP = 0.55;
+  const top = outline.map(([r, u]) => {
+    const d = Math.hypot(r, u) || 1;
+    const k = (d - LIP) / d;
+    return [r * k, u * k];
+  });
   for (let i = 0; i < n; i++) {
-    const [ar, au] = outline[i];
-    const [br, bu] = outline[(i + 1) % n];
+    const [ar, au] = top[i];
+    const [br, bu] = top[(i + 1) % n];
     t.tri(W(0, 0, 0), W(br, bu, 0), W(ar, au, 0), 'grass');
   }
   // 岸壁分層：每層向內收、往下並帶一點起伏
   const layers = [
-    { y: 0, inset: 0, jitter: 0 },
-    { y: -0.6, inset: 0, jitter: 0, color: 'canopy' },
+    { y: 0, inset: LIP, jitter: 0 },
+    { y: -0.22, inset: 0, jitter: 0, color: 'grassLight' }, // 草緣：略亮、向外鼓出
+    { y: -0.8, inset: 0.05, jitter: 0, color: 'canopy' },
     { y: -2.4, inset: 0.15, jitter: 0.3, color: 'soil' },
     { y: -4.6, inset: 0.45, jitter: 0.5, color: 'soil' },
     { y: -7.4, inset: 1.3, jitter: 0.8, color: 'building' },
@@ -216,6 +223,32 @@ export function scatterFlowers(preset) {
     out.push({ r: p[0], u: p[1], x, z, color: a ? a.color : colors[Math.floor(rand() * colors.length)], rot: rand() * Math.PI });
   }
   return out;
+}
+
+/** 島緣小物：沿岸的岩石與垂下的藤蔓（位置以世界座標回傳） */
+export function scatterEdge(preset) {
+  const rand = rng(preset.id === 'ring' ? 58 : 29);
+  const outline = densify(islandOutline(preset.island), 1.4);
+  const place = (inset) => {
+    const [r, u] = outline[Math.floor(rand() * outline.length)];
+    const d = Math.hypot(r, u) || 1;
+    const k = (d - inset) / d;
+    const [x, z] = toWorld(r * k, u * k);
+    return { x, z, r: r * k, u: u * k };
+  };
+  const plots = Object.values(preset.buildings);
+  const clear = (p) => !plots.some(([r, u]) => Math.abs(p.r - r) < PLOT_HALF + 0.4 && Math.abs(p.u - u) < PLOT_HALF + 0.4);
+  const rocks = [];
+  for (let tries = 0; tries < 400 && rocks.length < (preset.id === 'ring' ? 26 : 20); tries++) {
+    const p = place(0.9 + rand() * 0.9);
+    if (clear(p)) rocks.push({ ...p, s: 0.28 + rand() * 0.45, rot: rand() * 6.28, color: rand() < 0.7 ? 'building' : 'light' });
+  }
+  const vines = [];
+  for (let i = 0; i < (preset.id === 'ring' ? 40 : 30); i++) {
+    const p = place(0.62);
+    vines.push({ ...p, len: 1.2 + rand() * 3.2, rot: rand() * 6.28 });
+  }
+  return { rocks, vines };
 }
 
 /** 合併成一個地形幾何（島＋色塊＋道路），一次 draw call */
