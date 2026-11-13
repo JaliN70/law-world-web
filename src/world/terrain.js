@@ -74,7 +74,7 @@ function densify(poly, step) {
 /** 浮島：草地頂面 Y=0、草皮邊、土層、岩層、底部收尖 */
 export function buildIsland(preset) {
   const rand = rng(preset.id === 'ring' ? 7 : 11);
-  const outline = densify(islandOutline(preset.island), 3.2);
+  const outline = densify(islandOutline(preset.island), 2.4);
   const t = new Tris();
   const W = (r, u, y) => {
     const [x, z] = toWorld(r, u);
@@ -93,33 +93,45 @@ export function buildIsland(preset) {
     const [br, bu] = top[(i + 1) % n];
     t.tri(W(0, 0, 0), W(br, bu, 0), W(ar, au, 0), 'grass');
   }
-  // 岸壁分層：每層向內收、往下並帶一點起伏
-  const layers = [
-    { y: 0, inset: LIP, jitter: 0 },
-    { y: -0.22, inset: 0, jitter: 0, color: 'grassLight' }, // 草緣：略亮、向外鼓出
-    { y: -0.8, inset: 0.05, jitter: 0, color: 'canopy' },
-    { y: -2.4, inset: 0.15, jitter: 0.3, color: 'soil' },
-    { y: -4.6, inset: 0.45, jitter: 0.5, color: 'soil' },
-    { y: -7.4, inset: 1.3, jitter: 0.8, color: 'building' },
-    { y: -10.6, inset: 3.4, jitter: 1.0, color: 'building' },
-    { y: -14.0, inset: 7.5, jitter: 0.9, color: 'dark' },
-  ];
-  const cx = 0;
-  const cu = 0;
-  const rings = layers.map((L) =>
-    outline.map(([r, u]) => {
-      const d = Math.hypot(r - cx, u - cu) || 1;
-      const k = Math.max(0.15, (d - L.inset) / d);
-      const j = (rand() - 0.5) * L.jitter;
-      return W(r * k + j, u * k + j, L.y + (rand() - 0.5) * L.jitter);
-    })
-  );
-  for (let l = 1; l < layers.length; l++) {
+  // 岸壁：參考山壁照片——參差的岩面、突出的岩棚，並有一塊塊苔蘚綠附在岩壁上。
+  // 關鍵高度與內縮（由上而下收窄成倒錐）；岩壁段再各切兩層，讓每個面更碎。
+  const keys = [[0, LIP], [-0.22, 0], [-0.8, 0.05], [-2.4, 0.15], [-4.6, 0.45], [-7.4, 1.3], [-10.6, 3.4], [-14, 7.5]];
+  const levels = keys.slice(0, 4).map(([y, inset]) => ({ y, inset }));
+  for (let k = 3; k < keys.length - 1; k++) {
+    const [y0, i0] = keys[k];
+    const [y1, i1] = keys[k + 1];
+    levels.push({ y: (y0 + y1) / 2, inset: (i0 + i1) / 2 }, { y: y1, inset: i1 });
+  }
+  const rings = levels.map((L, l) => {
+    const depth = Math.min(1, -L.y / 5);
+    return outline.map(([r, u], i) => {
+      const d = Math.hypot(r, u) || 1;
+      // 相鄰頂點的起伏要連貫（岩棚），再疊一點隨機碎角
+      const nz = Math.sin(i * 0.8 + l * 2.1) * 0.5 + Math.sin(i * 0.31 - l * 1.3) * 0.5;
+      const inset = l < 3 ? L.inset : Math.max(-0.6, L.inset + (nz * 1.1 + (rand() - 0.5) * 0.7) * depth);
+      const k = Math.max(0.15, (d - inset) / d);
+      const jy = l < 3 ? 0 : (rand() - 0.5) * 0.5 * depth;
+      return W(r * k, u * k, L.y + jy);
+    });
+  });
+  for (let l = 1; l < levels.length; l++) {
     const up = rings[l - 1];
     const dn = rings[l];
+    const depth = -(levels[l].y + levels[l - 1].y) / 2;
     for (let i = 0; i < n; i++) {
       const i2 = (i + 1) % n;
-      t.quad(up[i], up[i2], dn[i2], dn[i], layers[l].color);
+      let color;
+      if (l === 1) color = 'grassLight'; // 草緣
+      else if (l === 2) color = 'canopy';
+      else {
+        const moss = Math.sin(i * 0.9 + l * 1.9) + Math.sin(i * 0.41 - l * 1.1);
+        const n2 = Math.sin(i * 1.7 + l * 0.9);
+        if (moss > 0.45 + depth * 0.12) color = ['canopy', 'grassDark', 'grass'][(i + l) % 3];
+        else if (depth < 3) color = n2 > 0.85 ? 'soil' : n2 > -0.2 ? 'road' : 'building'; // 褐色只留零星一點
+        else if (depth < 8) color = n2 > 0 ? 'road' : 'building';
+        else color = n2 > 0 ? 'building' : 'dark';
+      }
+      t.quad(up[i], up[i2], dn[i2], dn[i], color);
     }
   }
   // 底部收尖
