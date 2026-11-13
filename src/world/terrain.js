@@ -1,15 +1,15 @@
 /**
  * 依布局即時產生：浮島（草地頂面＋分層岸壁）、道路、樹木位置、路燈位置。
- * 全部以色盤 UV 上色，和 park.glb 共用同一張 4×4 色盤與材質。
+ * 全部以色盤 UV 上色，和 park.glb 共用同一張 4×5 色盤與材質。
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { toWorld, islandOutline, pointInPolygon, distToSegment, PLAZA_R, PLOT_HALF, ROAD_W } from './layout.js';
 
-const CELLS = ['brand', 'logoRed', 'fire', 'building', 'telecom', 'accessibility', 'water', 'electrical', 'road', 'grass', 'canopy', 'soil', 'light', 'dark', 'yellow', 'waterBlue'];
+const CELLS = ['brand', 'logoRed', 'fire', 'building', 'telecom', 'accessibility', 'water', 'electrical', 'road', 'grass', 'canopy', 'soil', 'light', 'dark', 'yellow', 'waterBlue', 'glass'];
 export function cellUV(color) {
   const i = CELLS.indexOf(color);
-  return [((i % 4) + 0.5) / 4, (Math.floor(i / 4) + 0.5) / 4];
+  return [((i % 4) + 0.5) / 4, (Math.floor(i / 4) + 0.5) / 5];
 }
 
 /** 可重現的亂數（同一布局每次長得一樣） */

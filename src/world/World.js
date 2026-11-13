@@ -422,6 +422,7 @@ export class World {
     this.sun.color.set(s.sun[0]);
     this.sun.intensity = s.sun[1];
     document.documentElement.classList.toggle('night', on);
+    this.park?.palette?.nightU && (this.park.palette.nightU.value = on ? 1 : 0);
     this.sky?.setNight(on);
     this.effects.setNight(on);
   }

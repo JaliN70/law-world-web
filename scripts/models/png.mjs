@@ -1,4 +1,4 @@
-/** 產生 4×4 RGB PNG（色盤圖集），免額外相依 */
+/** 產生 cols×rows RGB PNG（色盤圖集，預設 4×5），免額外相依 */
 import zlib from 'node:zlib';
 
 const TABLE = new Uint32Array(256).map((_, n) => {
@@ -20,18 +20,18 @@ function chunk(type, data) {
   return Buffer.concat([len, body, crc]);
 }
 
-/** colors：16 個 '#RRGGBB'，列優先 */
-export function palettePng(colors, size = 4) {
+/** colors：最多 cols×rows 個 '#RRGGBB'，列優先；不足補黑 */
+export function palettePng(colors, cols = 4, rows = 5) {
   const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(size, 0);
-  ihdr.writeUInt32BE(size, 4);
+  ihdr.writeUInt32BE(cols, 0);
+  ihdr.writeUInt32BE(rows, 4);
   ihdr[8] = 8; // bit depth
   ihdr[9] = 2; // RGB
-  const raw = Buffer.alloc(size * (size * 3 + 1));
-  for (let y = 0; y < size; y++)
-    for (let x = 0; x < size; x++) {
-      const hex = colors[y * size + x].slice(1);
-      const o = y * (size * 3 + 1) + 1 + x * 3;
+  const raw = Buffer.alloc(rows * (cols * 3 + 1));
+  for (let y = 0; y < rows; y++)
+    for (let x = 0; x < cols; x++) {
+      const hex = (colors[y * cols + x] || '#000000').slice(1);
+      const o = y * (cols * 3 + 1) + 1 + x * 3;
       raw[o] = parseInt(hex.slice(0, 2), 16);
       raw[o + 1] = parseInt(hex.slice(2, 4), 16);
       raw[o + 2] = parseInt(hex.slice(4, 6), 16);

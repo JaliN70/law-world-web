@@ -63,7 +63,7 @@ function toast(html, ms = 3200) {
 
 function updateCounts() {
   el.questCount.textContent = `${progress.doneCount}/${QUESTS.length}`;
-  el.btnNight.hidden = !progress.unlocks().has('night_mode');
+  el.btnNight.hidden = false; // 夜間模式一開始就能用
   el.btnNight.setAttribute('aria-pressed', String(Boolean(progress.state.prefs.night)));
   el.btnMotion.setAttribute('aria-pressed', String(reduced));
 }
@@ -575,7 +575,7 @@ async function boot() {
   const m = measure();
   world.resize(m.w, m.h, m.reserve);
   progress.unlocks().forEach((k) => world.effects.unlock(k, { animate: false }));
-  if (progress.state.prefs.night && progress.unlocks().has('night_mode')) world.setNight(true);
+  if (progress.state.prefs.night) world.setNight(true);
   attachInput();
   window.addEventListener('resize', onResize);
   mq.addEventListener('change', onResize);

@@ -37,20 +37,27 @@ function createPalette(map) {
   const base = new THREE.MeshLambertMaterial({ map, flatShading: true, name: 'park_palette' });
 
   /** 可降飽和：藍圖 S4「其他建築降低飽和度 40%」 */
+  // 夜間窗光：所有建築材質共用同一個 uniform，窗玻璃色（glass）的面會發暖黃光
+  const nightU = { value: 0 };
+  const glassLinear = new THREE.Color('#3B4A63');
+  const glassVec = new THREE.Vector3(glassLinear.r, glassLinear.g, glassLinear.b);
   const saturatable = (name) => {
     const m = base.clone();
     m.name = name;
     m.userData.uSat = { value: 1 };
     m.onBeforeCompile = (shader) => {
       shader.uniforms.uSat = m.userData.uSat;
+      shader.uniforms.uNight = nightU;
+      shader.uniforms.uGlass = { value: glassVec };
       shader.fragmentShader = shader.fragmentShader
-        .replace('void main() {', 'uniform float uSat;\nvoid main() {')
+        .replace('void main() {', 'uniform float uSat;\nuniform float uNight;\nuniform vec3 uGlass;\nvoid main() {')
         .replace(
           '#include <map_fragment>',
-          '#include <map_fragment>\n\tdiffuseColor.rgb = mix(vec3(dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114))), diffuseColor.rgb, uSat);'
-        );
+          '#include <map_fragment>\n\tfloat isGlass = 1.0 - step(0.03, distance(diffuseColor.rgb, uGlass));\n\tdiffuseColor.rgb = mix(vec3(dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114))), diffuseColor.rgb, uSat);'
+        )
+        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n\ttotalEmissiveRadiance += isGlass * uNight * uSat * vec3(1.0, 0.72, 0.3) * 0.9;');
     };
-    m.customProgramCacheKey = () => 'park_sat';
+    m.customProgramCacheKey = () => 'park_sat_night';
     return m;
   };
 
@@ -64,5 +71,5 @@ function createPalette(map) {
     return m;
   };
 
-  return { map, base, saturatable, glowing };
+  return { map, base, saturatable, glowing, nightU };
 }
