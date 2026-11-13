@@ -1,134 +1,257 @@
 [
   {
     "name": "fire",
-    "triangles": 1828,
-    "bytes": 11616,
+    "kind": "building",
+    "triangles": 1040,
     "min": [
-      -4.0,
-      0.0,
-      -4.0
+      -4,
+      0,
+      -4
     ],
     "max": [
-      4.0,
-      9.55,
-      4.0
-    ],
-    "sizeXYZ": [
-      8.0,
-      9.55,
-      8.0
-    ],
-    "dracoBytes": 5339,
-    "parts": 65
+      4,
+      13.787,
+      4
+    ]
   },
   {
     "name": "building",
-    "triangles": 2004,
-    "bytes": 12308,
+    "kind": "building",
+    "triangles": 872,
     "min": [
-      -4.0,
-      0.0,
-      -4.0
+      -4,
+      0,
+      -4
     ],
     "max": [
-      4.0,
-      6.18,
-      4.0
-    ],
-    "sizeXYZ": [
-      8.0,
-      6.18,
-      8.0
-    ],
-    "dracoBytes": 6052,
-    "parts": 52
+      4,
+      7.95,
+      4.05
+    ]
   },
   {
     "name": "telecom",
-    "triangles": 3168,
-    "bytes": 16036,
+    "kind": "building",
+    "triangles": 1220,
     "min": [
-      -4.0,
-      0.0,
-      -4.0
+      -4,
+      0,
+      -4
     ],
     "max": [
-      4.0,
-      10.45,
-      4.0
-    ],
-    "sizeXYZ": [
-      8.0,
-      10.45,
-      8.0
-    ],
-    "dracoBytes": 9752,
-    "parts": 83
+      4,
+      13.1,
+      4
+    ]
   },
   {
     "name": "accessibility",
-    "triangles": 2132,
-    "bytes": 12012,
+    "kind": "building",
+    "triangles": 1040,
     "min": [
-      -4.0,
-      0.0,
-      -4.0
+      -4,
+      0,
+      -4
     ],
     "max": [
-      4.0,
-      4.97,
-      4.0
-    ],
-    "sizeXYZ": [
-      8.0,
-      4.97,
-      8.0
-    ],
-    "dracoBytes": 5741,
-    "parts": 93
+      4,
+      5.95,
+      4
+    ]
   },
   {
     "name": "water",
-    "triangles": 3176,
-    "bytes": 16088,
+    "kind": "building",
+    "triangles": 904,
     "min": [
-      -4.0,
-      0.0,
-      -4.0
+      -4,
+      0,
+      -4
     ],
     "max": [
-      4.0,
-      8.37,
-      4.0
-    ],
-    "sizeXYZ": [
-      8.0,
-      8.37,
-      8.0
-    ],
-    "dracoBytes": 9807,
-    "parts": 66
+      4,
+      8.35,
+      4
+    ]
   },
   {
     "name": "electrical",
-    "triangles": 4812,
-    "bytes": 17624,
+    "kind": "building",
+    "triangles": 1796,
     "min": [
-      -4.0,
-      0.0,
-      -4.0
+      -4,
+      0,
+      -4
     ],
     "max": [
-      4.0,
-      4.55,
-      4.0
+      4,
+      6.15,
+      4
+    ]
+  },
+  {
+    "name": "plaza",
+    "kind": "prop",
+    "triangles": 216,
+    "min": [
+      -6.6,
+      0,
+      -5.85
     ],
-    "sizeXYZ": [
-      8.0,
-      4.55,
-      8.0
+    "max": [
+      6.6,
+      1.12,
+      5.85
+    ]
+  },
+  {
+    "name": "tree_round",
+    "kind": "prop",
+    "triangles": 60,
+    "min": [
+      -0.808,
+      0,
+      -0.808
     ],
-    "dracoBytes": 11356,
-    "parts": 118
+    "max": [
+      0.96,
+      2.558,
+      0.81
+    ]
+  },
+  {
+    "name": "tree_cone",
+    "kind": "prop",
+    "triangles": 32,
+    "min": [
+      -0.823,
+      0,
+      -0.95
+    ],
+    "max": [
+      0.823,
+      3,
+      0.95
+    ]
+  },
+  {
+    "name": "bush",
+    "kind": "prop",
+    "triangles": 40,
+    "min": [
+      -0.51,
+      -0.04,
+      -0.51
+    ],
+    "max": [
+      0.84,
+      0.833,
+      0.54
+    ]
+  },
+  {
+    "name": "lamp",
+    "kind": "prop",
+    "triangles": 84,
+    "min": [
+      -0.191,
+      0,
+      -0.22
+    ],
+    "max": [
+      0.62,
+      2.83,
+      0.22
+    ]
+  },
+  {
+    "name": "flag",
+    "kind": "prop",
+    "triangles": 92,
+    "min": [
+      -0.26,
+      0,
+      -0.3
+    ],
+    "max": [
+      1.53,
+      4.535,
+      0.3
+    ]
+  },
+  {
+    "name": "access_sign",
+    "kind": "prop",
+    "triangles": 180,
+    "min": [
+      -0.5,
+      0,
+      -0.06
+    ],
+    "max": [
+      0.5,
+      2.5,
+      0.118
+    ]
+  },
+  {
+    "name": "person_a",
+    "kind": "prop",
+    "triangles": 152,
+    "min": [
+      -0.38,
+      0,
+      -0.17
+    ],
+    "max": [
+      0.38,
+      1.76,
+      0.17
+    ]
+  },
+  {
+    "name": "person_b",
+    "kind": "prop",
+    "triangles": 152,
+    "min": [
+      -0.38,
+      0,
+      -0.17
+    ],
+    "max": [
+      0.38,
+      1.76,
+      0.17
+    ]
+  },
+  {
+    "name": "person_c",
+    "kind": "prop",
+    "triangles": 152,
+    "min": [
+      -0.38,
+      0,
+      -0.17
+    ],
+    "max": [
+      0.38,
+      1.76,
+      0.17
+    ]
+  },
+  {
+    "name": "person_d",
+    "kind": "prop",
+    "triangles": 152,
+    "min": [
+      -0.38,
+      0,
+      -0.17
+    ],
+    "max": [
+      0.38,
+      1.76,
+      0.17
+    ]
   }
 ]

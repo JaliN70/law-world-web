@@ -1,89 +1,73 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="description" content="法規園區 — 互動式等角微縮世界，六大法規領域總入口" />
-    <title>法規園區｜法規微縮世界</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1F4E79" />
+    <meta name="description" content="法規園區：互動式等角微縮世界，六個法規領域的導讀、任務與原文入口。" />
+    <title>法規園區｜Tysic工程資訊部</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2l12 7v14l-12 7-12-7V9z' fill='%231F4E79'/%3E%3Cpath d='M16 11l4.3 2.5v5L16 21l-4.3-2.5v-5z' fill='%23FF0000'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="/src/styles.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <a href="#list-view" class="skip-link">跳至列表檢視</a>
-    <div id="app" class="app">
-      <header class="top-bar" role="banner">
-        <div class="brand">
-          <span class="brand-mark" aria-hidden="true"></span>
-          <span class="brand-title">Tysic工程資訊部｜法規園區</span>
-        </div>
-        <button type="button" id="btn-toggle-view-top" class="top-list-btn" aria-label="列表檢視">☰ 列表</button>
-        <button type="button" id="btn-reduce-motion" class="sr-only-focusable" title="減少動態效果" aria-pressed="false">
-          減少動態
-        </button>
-      </header>
+    <a class="skip-link" href="#list-view" id="skip">跳至列表檢視</a>
 
-      <main class="main-stage">
-        <div id="canvas-wrap" class="canvas-wrap" aria-hidden="false">
-          <nav id="archipelago-minimap" class="archipelago-minimap" aria-label="群島小地圖">
-            <p class="minimap-title">群島小地圖</p>
-            <div class="minimap-hex" role="group" aria-label="六島">
-              <button type="button" class="minimap-node" data-island="fire" aria-label="消防">●</button>
-              <button type="button" class="minimap-node" data-island="building" aria-label="建築技術">●</button>
-              <button type="button" class="minimap-node" data-island="telecom" aria-label="電信">●</button>
-              <button type="button" class="minimap-node" data-island="accessibility" aria-label="無障礙">●</button>
-              <button type="button" class="minimap-node" data-island="water" aria-label="給排水">●</button>
-              <button type="button" class="minimap-node" data-island="electrical" aria-label="電氣">●</button>
-            </div>
-          </nav>
-          <canvas id="world-canvas" role="img" aria-label="法規園區群島等角地圖，可點選島嶼與建築"></canvas>
-          <div id="labels-layer" class="labels-layer" aria-live="polite"></div>
-          <div id="load-fallback" class="load-fallback hidden" role="alert">
-            <p>3D 場景載入較久或不受支援。</p>
-            <button type="button" id="btn-fallback-list" class="btn-primary">改用列表檢視</button>
-          </div>
-        </div>
-
-        <aside id="list-view" class="list-view hidden" aria-label="六站列表檢視">
-          <h2>六大法規領域</h2>
-          <p class="list-hint">可在此瀏覽全部站點，亦為螢幕閱讀器主要導覽路徑。</p>
-          <div id="list-cards" class="list-cards"></div>
-        </aside>
-      </main>
-
-      <footer class="thumb-zone" role="toolbar" aria-label="主要操作">
-        <button type="button" id="btn-back-archipelago" class="thumb-btn outlined hidden">返回群島</button>
-        <button type="button" id="btn-quests" class="thumb-btn solid">任務 <span id="quest-thumb-count">0/6</span></button>
-        <button type="button" id="btn-toggle-view" class="thumb-btn outlined">☰ 列表檢視</button>
-      </footer>
-
-      <div id="confirm-card" class="confirm-card hidden" role="dialog" aria-modal="true" aria-labelledby="card-title">
-        <div id="card-body" class="card-body"></div>
+    <header class="topbar">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M16 2l12 7v14l-12 7-12-7V9z" fill="none" stroke="#fff" stroke-width="2.4" />
+          <path d="M16 11l4.3 2.5v5L16 21l-4.3-2.5v-5z" fill="#FF0000" />
+        </svg>
+        <span class="brand-title"><span class="full">Tysic工程資訊部<span class="sep" aria-hidden="true">｜</span></span>法規園區</span>
       </div>
-
-      <div id="tutorial-overlay" class="tutorial-overlay hidden" role="dialog" aria-labelledby="tutorial-title">
-        <div id="tutorial-spotlight" class="tutorial-spotlight hidden" aria-hidden="true"></div>
-        <div class="tutorial-sheet">
-          <p class="tutorial-step" id="tutorial-step-label">教學 1 / 4</p>
-          <h2 id="tutorial-title">歡迎來到法規園區</h2>
-          <p id="tutorial-text"></p>
-          <div class="tutorial-actions">
-            <button type="button" id="btn-tutorial-skip" class="btn-outline">略過教學</button>
-            <button type="button" id="btn-tutorial-next" class="btn-primary">下一步</button>
-          </div>
-        </div>
+      <div class="top-actions">
+        <button type="button" id="btn-night" class="icon-btn" aria-pressed="false" hidden title="夜景模式">🌙<span class="sr-only">夜景模式</span></button>
+        <button type="button" id="btn-motion" class="icon-btn" aria-pressed="false" title="減少動態">◐<span class="sr-only">減少動態</span></button>
+        <button type="button" id="btn-list-top" class="top-btn" aria-label="切換到列表檢視">☰<span class="txt"> 列表</span></button>
       </div>
+    </header>
 
-      <div id="quest-panel" class="quest-panel hidden" role="dialog" aria-labelledby="quest-title"></div>
+    <main id="stage" class="stage">
+      <div class="clouds" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <canvas id="world" aria-label="法規園區 3D 場景：六棟建築環繞中央廣場。也可使用列表檢視。"></canvas>
+      <div id="labels" class="labels"></div>
+      <div id="view-ctl" class="view-ctl" role="group" aria-label="視角控制">
+        <button type="button" id="btn-rot-l" aria-label="向左旋轉">⟲</button>
+        <button type="button" id="btn-rot-r" aria-label="向右旋轉">⟳</button>
+        <button type="button" id="btn-zoom-in" aria-label="放大">＋</button>
+        <button type="button" id="btn-zoom-out" aria-label="縮小">－</button>
+        <button type="button" id="btn-view-reset" aria-label="重設視角">⌂</button>
+      </div>
+      <div id="tut-spot" class="tut-spot hidden" aria-hidden="true"></div>
+      <section id="scene-task" class="scene-task hidden" aria-live="polite"></section>
+      <div id="loading" class="loading" role="status">
+        <p>正在搭建法規園區…</p>
+        <div class="bar"><span id="loading-bar"></span></div>
+      </div>
+    </main>
 
-      <div id="certificate-panel" class="certificate-panel hidden" role="dialog" aria-labelledby="cert-title" aria-modal="true"></div>
+    <section id="list-view" class="list-view hidden" aria-labelledby="list-title">
+      <h2 id="list-title" tabindex="-1">六個法規領域</h2>
+      <p class="muted">每一區都有導讀卡與任務；需要全文時進入原法規站或全國法規資料庫。</p>
+      <div id="list-cards" class="list-cards"></div>
+    </section>
 
-      <div id="lesson-sheet" class="lesson-sheet hidden" role="dialog" aria-labelledby="lesson-heading"></div>
-    </div>
+    <nav class="thumb" aria-label="主要操作">
+      <button type="button" id="btn-quests" class="btn solid">🗺️ 任務 <span id="quest-count">0/18</span></button>
+      <button type="button" id="btn-list" class="btn outlined">☰ 列表檢視</button>
+    </nav>
+
+    <section id="card" class="card hidden" aria-labelledby="card-title" role="dialog">
+      <div id="card-body"></div>
+    </section>
+    <div id="lesson" class="sheet hidden"></div>
+    <div id="quests" class="sheet hidden"></div>
+    <div id="cert" class="modal hidden"></div>
+    <div id="tutorial" class="tutorial hidden"></div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

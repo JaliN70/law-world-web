@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 220" font-family="'Microsoft JhengHei','Noto Sans TC',sans-serif" fill="#000">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="12" y="22" font-size="16" font-weight="700">附圖一</text>
+<text x="12" y="58" font-size="13">← 公眾電信網路</text>
+<rect x="120" y="78" width="250" height="62" fill="#fff" stroke="#000" stroke-width="1.5"/>
+<text x="245" y="105" font-size="13" text-anchor="middle">市內網路業務經營者設置於建築</text>
+<text x="245" y="121" font-size="13" text-anchor="middle">物端子板之電介接端子</text>
+<line x1="370" y1="109" x2="500" y2="109" stroke="#000" stroke-width="1.5"/>
+<polygon points="492,104 500,109 492,114" fill="#000"/>
+<rect x="500" y="78" width="170" height="62" fill="#fff" stroke="#000" stroke-width="1.5"/>
+<text x="585" y="113" font-size="13" text-anchor="middle">用戶側端子板之電介接端子</text>
+<line x1="670" y1="109" x2="720" y2="109" stroke="#000" stroke-width="1.5"/>
+<polygon points="712,104 720,109 712,114" fill="#000"/>
+<rect x="720" y="78" width="150" height="62" fill="#fff" stroke="#000" stroke-width="1.5"/>
+<text x="795" y="113" font-size="13" text-anchor="middle">用戶自備電信終端設備</text>
+<text x="402" y="98" font-size="12" text-anchor="middle">跳線</text>
+<line x1="430" y1="72" x2="430" y2="150" stroke="#000" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="430" y="168" font-size="12" text-anchor="middle">責任分界點</text>
+</svg>
