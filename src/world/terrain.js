@@ -149,6 +149,8 @@ export function buildRoads(segments, { width = ROAD_W, color = 'road', dashes = 
   for (const [a, b] of segments) {
     const len = quad(a, b, width / 2 + 0.25, 0, 0.05, 'light');
     quad(a, b, width / 2, 0.05, 0.07, color);
+    // 石板接縫：每 1.1 m 一道橫縫
+    for (let s = 0.8; s < len - 0.4; s += 1.1) quad(a, b, width / 2, 0.07, 0.074, 'building', s / len, (s + 0.07) / len);
     if (dashes) {
       const step = 2.4;
       for (let s = 1.2; s < len - 1.2; s += step) quad(a, b, 0.09, 0.07, 0.08, 'light', s / len, (s + 1.0) / len);
@@ -170,15 +172,19 @@ export function scatterTrees(preset) {
   const plots = Object.values(preset.buildings);
   const keep = [...preset.flags, preset.sign];
   const spots = [];
-  const target = preset.id === 'ring' ? 34 : 26;
+  const target = preset.id === 'ring' ? 46 : 36;
   for (let tries = 0; tries < 3000 && spots.length < target; tries++) {
-    const p = [(rand() * 2 - 1) * preset.island.hr, (rand() * 2 - 1) * preset.island.hu];
+    // 約六成的樹圍著既有的樹長成一叢，其餘隨機散布
+    const anchor = spots.length > 2 && rand() < 0.62 ? spots[Math.floor(rand() * spots.length)] : null;
+    const p = anchor
+      ? [anchor.r + (rand() * 2 - 1) * 3.4, anchor.u + (rand() * 2 - 1) * 3.4]
+      : [(rand() * 2 - 1) * preset.island.hr, (rand() * 2 - 1) * preset.island.hu];
     if (!pointInPolygon(p, poly)) continue;
     if (Math.hypot(p[0], p[1]) < PLAZA_R * (preset.plazaScale || 1) + 2.2) continue;
     if (plots.some(([r, u]) => Math.abs(p[0] - r) < PLOT_HALF + 1.6 && Math.abs(p[1] - u) < PLOT_HALF + 1.6)) continue;
     if (preset.roads.some((seg) => distToSegment(p, seg) < ROAD_W / 2 + 1.4)) continue;
     if (keep.some(([r, u]) => Math.hypot(p[0] - r, p[1] - u) < 2.2)) continue;
-    if (spots.some((s) => Math.hypot(p[0] - s.r, p[1] - s.u) < 2.6)) continue;
+    if (spots.some((s) => Math.hypot(p[0] - s.r, p[1] - s.u) < 1.7)) continue;
     const k = rand();
     spots.push({ r: p[0], u: p[1], type: k < 0.5 ? 'tree_round' : k < 0.78 ? 'tree_cone' : 'bush', scale: 0.85 + rand() * 0.4, rot: rand() * Math.PI * 2 });
   }

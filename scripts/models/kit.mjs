@@ -114,6 +114,20 @@ export class Parts {
     return this;
   }
 
+  /**
+   * 量體外殼細節：底部勒腳（比牆寬一圈的深色基座）＋四角壁柱。
+   * (w,h,d) 為牆體尺寸，at 為牆體底面中心（與 box 相同）。
+   */
+  shell(w, h, d, at = {}, trim = 'light', base = 'dark') {
+    const { x = 0, y = 0, z = 0 } = at;
+    this.box(w + 0.18, 0.42, d + 0.18, base, { x, y, z });
+    const k = 0.3;
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      this.box(k, h - 0.1, k, trim, { x: x + sx * (w / 2 - k / 2 + 0.06), y: y + 0.42, z: z + sz * (d / 2 - k / 2 + 0.06) });
+    }
+    return this;
+  }
+
   /** 牆面窗列：在 face（'+z' | '-z' | '+x' | '-x'）平面上排一列窗 */
   windows(face, { count, w, h, gap, y, offset, along = 0 }, color = 'dark', frame = 'light') {
     const total = count * w + (count - 1) * gap;

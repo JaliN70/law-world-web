@@ -20,10 +20,12 @@ export function fire() {
   const B = 'fire';
   // 主車庫量體
   p.box(5.2, 4.4, 5, B, { x: -1.1, y: 0.15, z: -0.3 });
+  p.shell(5.2, 4.4, 5, { x: -1.1, y: 0.15, z: -0.3 });
   p.box(5.4, 0.3, 5.2, 'light', { x: -1.1, y: 4.55, z: -0.3 }); // 簷口
   p.parapet(5.2, 5, 0.2, 0.5, B, { x: -1.1, y: 4.85, z: -0.3 });
   // 右後方辦公翼（L 形）
   p.box(2.2, 3.2, 3.2, B, { x: 2.6, y: 0.15, z: -1.2 });
+  p.shell(2.2, 3.2, 3.2, { x: 2.6, y: 0.15, z: -1.2 });
   p.box(2.4, 0.25, 3.4, 'light', { x: 2.6, y: 3.35, z: -1.2 });
   p.windows('+z', { count: 1, w: 0.9, h: 1.0, gap: 0, y: 1.6, offset: 0.4, along: 2.6 });
   p.windows('+x', { count: 2, w: 0.8, h: 1.0, gap: 0.5, y: 1.6, offset: 3.7, along: -1.2 });
@@ -83,6 +85,7 @@ export function building() {
   const p = plot(new Parts());
   const B = 'building';
   p.box(6.4, 6.6, 5.8, B, { y: 0.15, z: -0.6 });
+  p.shell(6.4, 6.6, 5.8, { y: 0.15, z: -0.6 });
   p.box(6.6, 0.3, 6.0, 'light', { y: 6.75, z: -0.6 });
   p.parapet(6.4, 5.8, 0.2, 0.45, B, { y: 7.05, z: -0.6 });
   p.box(1.6, 0.9, 1.4, 'light', { x: -1.4, y: 7.05, z: -1.4 }); // 屋頂機房
@@ -123,6 +126,7 @@ export function telecom() {
   const p = plot(new Parts());
   const B = 'telecom';
   p.box(5.6, 3.6, 5.0, B, { x: -0.8, y: 0.15, z: 0.4 });
+  p.shell(5.6, 3.6, 5.0, { x: -0.8, y: 0.15, z: 0.4 });
   p.box(5.8, 0.25, 5.2, 'light', { x: -0.8, y: 3.75, z: 0.4 });
   p.parapet(5.6, 5.0, 0.18, 0.4, B, { x: -0.8, y: 4.0, z: 0.4 });
   p.box(1.3, 2.1, 0.12, 'dark', { x: -2.2, y: 0.15, z: 2.95 }); // 門
@@ -186,6 +190,7 @@ export function accessibility() {
   const p = plot(new Parts());
   const B = 'accessibility';
   p.box(7.2, 4.4, 5.2, B, { y: 0.15, z: -0.9 });
+  p.shell(7.2, 4.4, 5.2, { y: 0.15, z: -0.9 });
   p.box(7.5, 0.3, 5.5, 'light', { y: 4.55, z: -0.9 });
   // 斜屋頂（四坡，低矮）
   const roof = new THREE.CylinderGeometry(0.6, 4.6, 1.1, 4);
@@ -248,6 +253,7 @@ export function water() {
   const p = plot(new Parts());
   const B = 'water';
   p.box(4.8, 3.0, 4.4, B, { x: -1.3, y: 0.15, z: 0.1 });
+  p.shell(4.8, 3.0, 4.4, { x: -1.3, y: 0.15, z: 0.1 });
   p.box(5.0, 0.25, 4.6, 'light', { x: -1.3, y: 3.15, z: 0.1 });
   p.box(1.2, 2.0, 0.12, 'dark', { x: -2.2, y: 0.15, z: 2.35 });
   p.windows('+z', { count: 1, w: 1.0, h: 0.9, gap: 0, y: 1.5, offset: 2.3, along: -0.4 });
